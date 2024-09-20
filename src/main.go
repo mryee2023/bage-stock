@@ -50,7 +50,6 @@ func watchConfig(filePath string) {
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				log.WithField("event", event).WithField("file", filePath).Info("配置文件被修改")
-
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
@@ -198,6 +197,6 @@ func main() {
 	if err := http.ListenAndServe(":9527", nil); err != nil {
 		log.Fatalf("start web server failure : %v", err)
 	}
-	fmt.Println("Listen On :9527......")
+	log.Infof("Service start success,Listen On :9527......")
 	select {}
 }
