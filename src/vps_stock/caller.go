@@ -1,4 +1,4 @@
-package bage
+package vps_stock
 
 import "runtime"
 

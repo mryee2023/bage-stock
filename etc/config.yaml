@@ -1,24 +1,53 @@
 vps:
-  name: bage
-  baseUrl: https://www.bagevm.com
-  products:
-    - name: tw-hinet-vds
-      kind:
-        - Hinet Dynamic 600M
-    - name: hong-kong-servers
-      kind:
-        - Hong Kong - STARTER
+  - name: bagevm
+    baseUrl: https://www.bagevm.com
+    productUrl: https://www.bagevm.com/index.php?rp=/store/
+    products:
+      - name: tw-hinet-vds
+        kind:
+          - Hinet Dynamic 600M
+      - name: hong-kong-servers
+        kind:
+          - Hong Kong - TINY
+          - Hong Kong - SMALL
+      - name: los-angeles-servers
+        kind:
+          - Los Angeles - TINY
+      - name: singapore-servers
+        kind:
+          - Singapore - SMALL
+  
+      - name: japan-servers
+        kind:
+          - Japan - SMALL
+  
+      - name: united-kingdom-servers
+        kind:
+          - United Kingdom - TINY
+
+  - name: halo
+    baseUrl: https://my.halocloud.net
+    productUrl: https://my.halocloud.net/index.php?rp=/store/
+    products:
+#      - name: singapore-singapore-bgp
+#        kind:
+#          - Singapore BGP VPS-500GB
+      
+      - name: tokyo-japan-bgp
+        kind:
+          - Tokyo Japan BGP VPS-Traffic billing
+  
 
 notify:
-  platform: bark                    #bark or telegram
-  key: duncuXiJeFrwkh55uMBmZg       #bark key or telegram bot token
-  chatId:       #telegram chat id
-#  platform: telegram
-#  key: 7770656473:AAE1D9k4rfPm4siew1qEpuIZfTcuuzgqVho
-#  chatId: -4558057968
+#  platform: bark                    #bark or telegram
+#  key: duncuXiJeFrwkh55uMBmZg       #bark key or telegram bot token
+#  chatId:       #telegram chat id
+  platform: telegram
+  key: 7727116717:AAH31RbD5ygRkuWGO1EaCcfKybAoirykxaY #7770656473:AAE1D9k4rfPm4siew1qEpuIZfTcuuzgqVho
+  chatId: -4583602085 #-4558057968
 
 #监控间隔时间
 checkTime: 1m
 
 #发现库存后的冷却时间,即关注的商品有库存后,在冷却时间内不再提醒
-frozen: 30m
+frozen: 10m
