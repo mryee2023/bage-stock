@@ -1,4 +1,4 @@
-package vps_stock
+package stock
 
 import (
 	"github.com/go-resty/resty/v2"

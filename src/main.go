@@ -7,28 +7,28 @@ import (
 	"strings"
 	"time"
 
-	"bage/src/vps_stock"
-	"bage/src/vps_stock/vars"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
+	"vps-stock/src/stock"
+	"vps-stock/src/stock/vars"
 )
 
 var configFile = flag.String("f", "etc/config.yaml", "the config file")
 var config vars.Config
 
-func createBot() vps_stock.BotNotifier {
+func createBot() stock.BotNotifier {
 	platform := strings.TrimSpace(strings.ToLower(config.Notify.Platform))
 	switch platform {
 	case "bark":
-		return vps_stock.NewBarkNotifier(config.Notify.Key)
+		return stock.NewBarkNotifier(config.Notify.Key)
 	case "telegram":
-		return vps_stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
+		return stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
 	}
 	return nil
 }
 
-func initBageVM(vps vars.VPS, notifier vps_stock.BotNotifier) {
-	p := vps_stock.NewBageVpsStockNotifier(vps, notifier)
+func initBageVM(vps vars.VPS, notifier stock.BotNotifier) {
+	p := stock.NewBageVpsStockNotifier(vps, notifier)
 	d, e := time.ParseDuration(config.CheckTime)
 	if e != nil {
 		log.Fatalf("error: %v", e)
@@ -47,8 +47,8 @@ func initBageVM(vps vars.VPS, notifier vps_stock.BotNotifier) {
 	}()
 }
 
-func initHaloVM(vps vars.VPS, notifier vps_stock.BotNotifier) {
-	p := vps_stock.NewHaloVpsStockNotifier(vps, notifier)
+func initHaloVM(vps vars.VPS, notifier stock.BotNotifier) {
+	p := stock.NewHaloVpsStockNotifier(vps, notifier)
 	d, e := time.ParseDuration(config.CheckTime)
 	if e != nil {
 		log.Fatalf("error: %v", e)
@@ -65,6 +65,18 @@ func initHaloVM(vps vars.VPS, notifier vps_stock.BotNotifier) {
 			}
 		}
 	}()
+}
+
+func generateStartupMsg(title string, vps vars.VPS) string {
+
+	startMsg := fmt.Sprintf("* %s: *\n\n", title)
+	for _, product := range vps.Products {
+		startMsg += fmt.Sprintf("> %s\n\n", product.Name)
+		startMsg += fmt.Sprintf("   - %s\n\n", strings.Join(product.Kind, " , "))
+
+	}
+	startMsg += fmt.Sprintf("\n\n")
+	return startMsg
 }
 
 func main() {
@@ -89,7 +101,7 @@ func main() {
 	if e != nil {
 		log.Fatalf("error: %v", e)
 	}
-	vps_stock.StartFrozen(d)
+	stock.StartFrozen(d)
 
 	bot := createBot()
 	if bot == nil {
@@ -100,23 +112,12 @@ func main() {
 
 	for _, vps := range config.VPS {
 		if vps.Name == "bagevm" {
-			startMsg += fmt.Sprintf("* BageVM: *\n\n")
-			for _, product := range vps.Products {
-				startMsg += fmt.Sprintf("> %s\n\n", product.Name)
-				startMsg += fmt.Sprintf("   - %s\n\n", strings.Join(product.Kind, " , "))
-
-			}
-			startMsg += fmt.Sprintf("\n\n")
+			startMsg += generateStartupMsg("BageVM", vps)
 			initBageVM(vps, bot)
 			continue
 		}
 		if vps.Name == "halo" {
-			startMsg += fmt.Sprintf("* Halo: *\n\n")
-			for _, product := range vps.Products {
-				startMsg += fmt.Sprintf("> %s\n\n", product.Name)
-				startMsg += fmt.Sprintf("   - %s\n\n", strings.Join(product.Kind, " , "))
-			}
-			startMsg += fmt.Sprintf("\n\n")
+			startMsg += generateStartupMsg("HaloCloud", vps)
 			initHaloVM(vps, bot)
 			continue
 		}

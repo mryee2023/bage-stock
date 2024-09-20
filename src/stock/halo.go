@@ -1,4 +1,4 @@
-package vps_stock
+package stock
 
 import (
 	"fmt"
@@ -6,38 +6,28 @@ import (
 	"sync"
 	"time"
 
-	"bage/src/vps_stock/vars"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+	"vps-stock/src/stock/vars"
 )
 
-//var cli *resty.Client
-//
-//func init() {
-//	cli = resty.New().SetDebug(false)
-//}
-
-type VpsStockNotifier interface {
-	Notify()
-}
-
-type BageVpsStockNotifier struct {
-	cli *resty.Client
+type HaloVpsStockNotifier struct {
 	vps vars.VPS
 	bot BotNotifier
+	cli *resty.Client
 }
 
-func NewBageVpsStockNotifier(vps vars.VPS, bot BotNotifier) *BageVpsStockNotifier {
-	return &BageVpsStockNotifier{
+func NewHaloVpsStockNotifier(vps vars.VPS, bot BotNotifier) *HaloVpsStockNotifier {
+	return &HaloVpsStockNotifier{
 		vps: vps,
 		bot: bot,
 		cli: resty.New(),
 	}
 }
 
-func (b *BageVpsStockNotifier) Notify() {
+func (b *HaloVpsStockNotifier) Notify() {
 	if len(b.vps.Products) == 0 {
 		return
 	}
@@ -45,7 +35,7 @@ func (b *BageVpsStockNotifier) Notify() {
 		return
 	}
 	b.cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-	b.cli.Header.Add("Referer", "https://www.bagevm.com/index.php")
+	b.cli.Header.Add("Referer", b.vps.BaseURL)
 	var wg sync.WaitGroup
 	var items []*vars.VpsStockItem
 	var mu sync.Mutex
@@ -74,7 +64,7 @@ func (b *BageVpsStockNotifier) Notify() {
 		}()
 	}
 	wg.Wait()
-	var body = "📢 *BageVM 库存通知*\n\n"
+	var body = "📢 *Halo库存通知*\n\n"
 	var sendMsg bool
 	for _, item := range items {
 		if item.Available > 0 {
@@ -91,14 +81,14 @@ func (b *BageVpsStockNotifier) Notify() {
 	}
 	if sendMsg {
 		b.bot.Notify(map[string]interface{}{
-			"title": "BageVM库存通知",
+			"title": "Halo库存通知",
 			"body":  body,
-			"group": "BageVM",
+			"group": "Halo",
 			"text":  body,
 		})
 	}
 }
-func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
+func (b *HaloVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
 
 	if err != nil {
@@ -108,10 +98,12 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 
 	var rtn []*vars.VpsStockItem
 
-	doc.Find("#productspo  div.col-md-3").Each(func(i int, s *goquery.Selection) {
-		h5 := s.Find("div.proprice>h5")
+	doc.Find(".product").Each(func(i int, s *goquery.Selection) {
 
-		productName := h5.Contents().Not("em").Text()
+		spans := s.Find("header span")
+
+		productName := spans.First().Text()
+		available := s.Find("span.qty").Text()
 		productName = strings.TrimSpace(productName)
 		if len(kind) > 0 {
 			var found bool
@@ -129,24 +121,21 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 			ProductName: productName,
 			Available:   9999,
 		}
-		if h5.Find("em").Length() > 0 {
+		if available != "" {
 			// 2. 获取 <em> 标签内 <span> 的值
-			available := h5.Find("em span").Text()
 			available = strings.Replace(available, "Available", "", -1)
 			available = strings.TrimSpace(available) // 去掉多余的空格
 			item.Available = cast.ToInt(available)
-			if item.Available == 0 {
-				return
-			}
-		} else {
-			item.Available = 9999
+		}
+
+		if item.Available == 0 {
+			return
 		}
 		// 3. 获取购买链接
-
-		buyUrl, _ := s.Find("div.proprice a.btn").Attr("href")
-		item.BuyUrl = b.vps.BaseURL + "/" + buyUrl
-		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl+"&aff=164")
-
+		buyUrl, _ := s.Find("a.btn-order-now").Attr("href")
+		//[Markdown语法](https://markdown.com.cn)
+		item.BuyUrl = b.vps.BaseURL + buyUrl
+		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl+"&aff=65")
 		rtn = append(rtn, item)
 	})
 	return rtn

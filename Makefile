@@ -1,4 +1,4 @@
-APP=bagevm-stock
+APP=vps-stock
 .PHONY: all windows linux darwin
 all: windows linux darwin
 windows: bin/${APP}-win-64.exe

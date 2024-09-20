@@ -1,4 +1,4 @@
-package vps_stock
+package stock
 
 import "runtime"
 
