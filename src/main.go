@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"vps-stock/src/stock"
@@ -27,6 +28,37 @@ func createBot() stock.BotNotifier {
 		return stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
 	}
 	return nil
+}
+
+// 监控配置文件变化
+func watchConfig(filePath string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer watcher.Close()
+	// 添加文件监控
+	err = watcher.Add(filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if event.Op&fsnotify.Write == fsnotify.Write {
+				log.WithField("event", event).WithField("file", filePath).Info("配置文件被修改")
+
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			log.WithField("err", err.Error()).Info("配置文件被修改")
+		}
+	}
 }
 
 func initBageVM(vps vars.VPS, notifier stock.BotNotifier) {
@@ -110,18 +142,17 @@ func main() {
 
 	b, err := os.ReadFile(*configFile)
 	if err != nil {
-		fmt.Printf("加载配置文件异常")
-		panic(err)
+		log.Fatalf("load config failure :%s, %v", *configFile, err)
 	}
 
 	err = yaml.Unmarshal(b, &config)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatalf("unmarshal config failure: %v", err)
 	}
 
 	d, e := time.ParseDuration(config.Frozen)
 	if e != nil {
-		log.Fatalf("error: %v", e)
+		log.Fatalf("parse frozen duration failure: %s, %v", config.Frozen, e)
 	}
 	stock.StartFrozen(d)
 
@@ -131,6 +162,12 @@ func main() {
 	}
 
 	startMsg := "📢 VPS库存通知 已启动\n\n"
+	go func() {
+		defer func() {
+			stock.CatchGoroutinePanic()
+		}()
+		watchConfig(*configFile)
+	}()
 
 	for _, vps := range config.VPS {
 		if vps.Name == "bagevm" {

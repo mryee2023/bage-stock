@@ -47,25 +47,31 @@ func (b *BageVpsStockNotifier) Notify() {
 	if len(b.vps.BaseURL) == 0 {
 		return
 	}
-
+	defer func() {
+		CatchGoroutinePanic()
+	}()
 	var wg sync.WaitGroup
 	var items []*vars.VpsStockItem
 	var mu sync.Mutex
 	for _, product := range b.vps.Products {
 		u := b.vps.ProductUrl + product.Name
-		log.WithField("url", u).Info("[bage] fetching url")
+		log.WithField("url", u).Trace("[bage] fetching url")
 		wg.Add(1)
 
 		go func() {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				CatchGoroutinePanic()
+
+			}()
 			res, err := b.cli.R().Get(u)
 
 			if err != nil {
-				log.WithField("url", u).Errorf("[bage] Error fetching url: %v", err)
+				log.WithField("url", u).Warn("[bage] Error fetching url: %v", err)
 				return
 			}
 			if res.StatusCode() != 200 {
-				log.WithField("status", res.StatusCode()).WithField("url", u).Error("[bage] Error fetching url")
+				log.WithField("status", res.StatusCode()).WithField("url", u).Warn("[bage] Error fetching url")
 
 				return
 			}
@@ -103,10 +109,13 @@ func (b *BageVpsStockNotifier) Notify() {
 	}
 }
 func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
+	defer func() {
+		CatchGoroutinePanic()
+	}()
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
 
 	if err != nil {
-		log.Errorf("Error parsing response: %v", err)
+		log.Warn("[bage]Error parsing response: %v", err)
 		return nil
 	}
 

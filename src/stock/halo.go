@@ -37,7 +37,7 @@ func (b *HaloVpsStockNotifier) Notify() {
 	if len(b.vps.BaseURL) == 0 {
 		return
 	}
-
+	defer CatchGoroutinePanic()
 	var wg sync.WaitGroup
 	var items []*vars.VpsStockItem
 	var mu sync.Mutex
@@ -46,15 +46,19 @@ func (b *HaloVpsStockNotifier) Notify() {
 		wg.Add(1)
 
 		go func() {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				CatchGoroutinePanic()
+			}()
+
 			res, err := b.cli.R().Get(u)
-			log.WithField("url", u).Info("[halo] fetching url")
+			log.WithField("url", u).Trace("[halo] fetching url")
 			if err != nil {
-				log.WithField("url", u).Errorf("[halo]Error fetching url: %v", err)
+				log.WithField("url", u).Warn("[halo]Error fetching url: %v", err)
 				return
 			}
 			if res.StatusCode() != 200 {
-				log.WithField("status", res.StatusCode()).WithField("url", u).Error("[halo]Error fetching url")
+				log.WithField("status", res.StatusCode()).WithField("url", u).Warn("[halo]Error fetching url")
 				return
 			}
 			v := b.parseResponse(product.Kind, res.String())
@@ -91,10 +95,15 @@ func (b *HaloVpsStockNotifier) Notify() {
 	}
 }
 func (b *HaloVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
+
+	defer func() {
+		CatchGoroutinePanic()
+	}()
+
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
 
 	if err != nil {
-		log.Errorf("Error parsing response: %v", err)
+		log.Warn("[halo]Error parsing response: %v", err)
 		return nil
 	}
 
