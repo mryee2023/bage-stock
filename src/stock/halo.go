@@ -20,10 +20,13 @@ type HaloVpsStockNotifier struct {
 }
 
 func NewHaloVpsStockNotifier(vps vars.VPS, bot BotNotifier) *HaloVpsStockNotifier {
+	cli := resty.New().SetDebug(false)
+	cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+	cli.Header.Add("Referer", vps.BaseURL)
 	return &HaloVpsStockNotifier{
 		vps: vps,
 		bot: bot,
-		cli: resty.New(),
+		cli: cli,
 	}
 }
 
@@ -34,8 +37,7 @@ func (b *HaloVpsStockNotifier) Notify() {
 	if len(b.vps.BaseURL) == 0 {
 		return
 	}
-	b.cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-	b.cli.Header.Add("Referer", b.vps.BaseURL)
+
 	var wg sync.WaitGroup
 	var items []*vars.VpsStockItem
 	var mu sync.Mutex
