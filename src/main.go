@@ -10,19 +10,31 @@ import (
 	"sync"
 	"time"
 
+	"bage/src/bage"
+	"bage/src/bage/vars"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
-	"vps-stock/src/vars"
 )
+
+var cli *resty.Client
+var notified map[string]struct{}
+
+func init() {
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetLevel(log.InfoLevel)
+	log.SetOutput(os.Stdout)
+	cli = resty.New()
+	notified = make(map[string]struct{})
+}
 
 type VpsStockNotifier interface {
 	Notify()
 }
 
-type Notifier interface {
+type BotNotifier interface {
 	Notify(map[string]interface{})
 }
 
@@ -33,6 +45,37 @@ type BarkNotifier struct {
 func NewBarkNotifier(deviceToken string) *BarkNotifier {
 	return &BarkNotifier{
 		deviceToken: deviceToken,
+	}
+}
+
+type TelegramNotifier struct {
+	botToken string
+	chatId   string
+}
+
+func NewTelegramNotifier(botToken string, chatId string) *TelegramNotifier {
+	return &TelegramNotifier{
+		botToken: botToken,
+		chatId:   chatId,
+	}
+}
+
+func (t *TelegramNotifier) Notify(msg map[string]interface{}) {
+
+	log.WithField("msg", msg)
+
+	defer func() {
+		bage.CatchGoroutinePanic()
+		log.Infof("telegram message sent")
+	}()
+	s, err := cli.R().SetBody(msg).
+		Post("https://api.telegram.org/bot" + t.botToken + "/sendMessage?chat_id=" + t.chatId)
+	if err != nil {
+		log.WithField("err", err.Error())
+		return
+	}
+	if s.StatusCode() != 200 {
+		log.WithField("status", s.StatusCode())
 	}
 }
 
@@ -52,16 +95,21 @@ func (b *BarkNotifier) Notify(msg map[string]interface{}) {
 type BageVpsStockNotifier struct {
 	baseUrl  string
 	products []vars.Product
+	bot      BotNotifier
 }
 
-func NewBageVpsStockNotifier(baseUrl string, products []vars.Product) *BageVpsStockNotifier {
+func NewBageVpsStockNotifier(baseUrl string, products []vars.Product, bot BotNotifier) *BageVpsStockNotifier {
 	return &BageVpsStockNotifier{
 		baseUrl:  baseUrl,  // "https://www.bagevm.com/index.php?rp=/store/",
 		products: products, // []string{"tw-hinet-vds"}, // "los-angeles-servers", "hong-kong-servers", "singapore-servers", "japan-servers", "united-kingdom-servers", "germany-servers"},
+		bot:      bot,
 	}
 }
 
 func openBrowser(url string) error {
+	defer func() {
+		bage.CatchGoroutinePanic()
+	}()
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin": // macOS
@@ -118,18 +166,21 @@ func (b *BageVpsStockNotifier) Notify() {
 	var sendMsg bool
 	for _, item := range items {
 		if item.Available > 0 {
+			if _, ok := notified[item.ProductName]; ok {
+				continue
+			}
 			sendMsg = true
-			body += fmt.Sprintf("%s: 库存 %d\n", item.ProductName, item.Available)
-			body += fmt.Sprintf("购买链接: %s\n", item.BuyUrl)
-			openBrowser(item.BuyUrl)
+			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
+			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
+			notified[item.ProductName] = struct{}{}
 		}
 	}
 	if sendMsg {
-		n := NewBarkNotifier("duncuXiJeFrwkh55uMBmZg")
-		n.Notify(map[string]interface{}{
+		b.bot.Notify(map[string]interface{}{
 			"title": "BageVM库存通知",
 			"body":  body,
 			"group": "BageVM",
+			"text":  body,
 		})
 	}
 }
@@ -164,14 +215,17 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 			ProductName: productName,
 			Available:   9999,
 		}
-		// 2. 获取 <em> 标签内 <span> 的值
-		available := h5.Find("em span").Text()
-
-		available = strings.Replace(available, "Available", "", -1)
-		available = strings.TrimSpace(available) // 去掉多余的空格
-		item.Available = cast.ToInt(available)
-		if item.Available == 0 {
-			return
+		if h5.Find("em").Length() > 0 {
+			// 2. 获取 <em> 标签内 <span> 的值
+			available := h5.Find("em span").Text()
+			available = strings.Replace(available, "Available", "", -1)
+			available = strings.TrimSpace(available) // 去掉多余的空格
+			item.Available = cast.ToInt(available)
+			if item.Available == 0 {
+				return
+			}
+		} else {
+			item.Available = 9999
 		}
 		// 3. 获取购买链接
 
@@ -184,6 +238,17 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 
 var configFile = flag.String("f", "etc/config.yaml", "the config file")
 var config vars.Config
+
+func createBot() BotNotifier {
+	platform := strings.TrimSpace(strings.ToLower(config.Notify.Platform))
+	switch platform {
+	case "bark":
+		return NewBarkNotifier(config.Notify.Key)
+	case "telegram":
+		return NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
+	}
+	return nil
+}
 
 func main() {
 
@@ -199,13 +264,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
-
-	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.InfoLevel)
-	log.SetOutput(os.Stdout)
-
-	p := NewBageVpsStockNotifier(config.VPS.BaseURL+"/index.php?rp=/store/", config.VPS.Products)
-
+	bot := createBot()
+	if bot == nil {
+		log.Fatalf("error: invalid bot platform")
+	}
+	p := NewBageVpsStockNotifier(config.VPS.BaseURL+"/index.php?rp=/store/", config.VPS.Products, bot)
 	d, e := time.ParseDuration(config.CheckTime)
 	if e != nil {
 		log.Fatalf("error: %v", e)

@@ -18,6 +18,7 @@ type Product struct {
 type Notify struct {
 	Platform string `yaml:"platform"`
 	Key      string `yaml:"key"`
+	ChatId   string `yaml:"chatId"`
 }
 type Config struct {
 	VPS       VPS    `yaml:"vps"`

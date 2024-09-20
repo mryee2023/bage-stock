@@ -5,10 +5,16 @@ vps:
     - name: tw-hinet-vds
       kind:
         - Hinet Dynamic 600M
+    - name: hong-kong-servers
+      kind:
+        - Hong Kong - STARTER
 
 notify:
-  platform: bark
-  key: duncuXiJeFrwkh55uMBmZg
+#  platform: bark                    #bark or telegram
+#  key: duncuXiJeFrwkh55uMBmZg       #bark key or telegram bot token
+#  chatId:       #telegram chat id
+  platform: telegram
+  key: 7770656473:AAE1D9k4rfPm4siew1qEpuIZfTcuuzgqVho
+  chatId: -4558057968
 
-
-checkTime: 10s
+checkTime: 1m

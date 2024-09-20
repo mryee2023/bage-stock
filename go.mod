@@ -1,4 +1,4 @@
-module vps-stock
+module bage
 
 go 1.23
 
