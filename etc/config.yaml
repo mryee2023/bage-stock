@@ -1,0 +1,14 @@
+vps:
+  name: bage
+  baseUrl: https://www.bagevm.com
+  products:
+    - name: tw-hinet-vds
+      kind:
+        - Hinet Dynamic 600M
+
+notify:
+  platform: bark
+  key: duncuXiJeFrwkh55uMBmZg
+
+
+checkTime: 10s
