@@ -23,12 +23,16 @@ var cli *resty.Client
 var notified map[string]time.Time
 var mapLock sync.Mutex
 
-func init() {
+func start() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(log.InfoLevel)
 	log.SetOutput(os.Stdout)
 	cli = resty.New()
 	notified = make(map[string]time.Time)
+	frozen, e := time.ParseDuration(config.Frozen)
+	if e != nil {
+		frozen = 30 * time.Minute
+	}
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
 		for {
@@ -36,8 +40,9 @@ func init() {
 			case <-ticker.C:
 				mapLock.Lock()
 				for k, v := range notified {
-					if time.Since(v) > 30*time.Minute {
+					if time.Since(v) > frozen {
 						delete(notified, k)
+						log.WithField("product", k).Info("release frozen")
 					}
 				}
 				mapLock.Unlock()
@@ -147,7 +152,6 @@ func (b *BageVpsStockNotifier) Notify() {
 	if len(b.baseUrl) == 0 {
 		return
 	}
-	cli := resty.New()
 	cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 	cli.Header.Add("Referer", "https://www.bagevm.com/index.php")
 	var wg sync.WaitGroup
@@ -282,6 +286,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
+
+	start()
+
 	bot := createBot()
 	if bot == nil {
 		log.Fatalf("error: invalid bot platform")

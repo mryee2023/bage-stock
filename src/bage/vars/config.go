@@ -24,4 +24,5 @@ type Config struct {
 	VPS       VPS    `yaml:"vps"`
 	Notify    Notify `yaml:"notify"`
 	CheckTime string `yaml:"checkTime"`
+	Frozen    string `yaml:"frozen"`
 }

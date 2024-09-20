@@ -10,11 +10,15 @@ vps:
         - Hong Kong - STARTER
 
 notify:
-#  platform: bark                    #bark or telegram
-#  key: duncuXiJeFrwkh55uMBmZg       #bark key or telegram bot token
-#  chatId:       #telegram chat id
-  platform: telegram
-  key: 7770656473:AAE1D9k4rfPm4siew1qEpuIZfTcuuzgqVho
-  chatId: -4558057968
+  platform: bark                    #bark or telegram
+  key: duncuXiJeFrwkh55uMBmZg       #bark key or telegram bot token
+  chatId:       #telegram chat id
+#  platform: telegram
+#  key: 7770656473:AAE1D9k4rfPm4siew1qEpuIZfTcuuzgqVho
+#  chatId: -4558057968
 
+#监控间隔时间
 checkTime: 1m
+
+#发现库存后的冷却时间,即关注的商品有库存后,在冷却时间内不再提醒
+frozen: 30m
