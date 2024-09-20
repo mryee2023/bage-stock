@@ -53,6 +53,7 @@ func (b *BageVpsStockNotifier) Notify() {
 	var mu sync.Mutex
 	for _, product := range b.vps.Products {
 		u := b.vps.ProductUrl + product.Name
+		log.WithField("url", u).Info("[bage] fetching url")
 		wg.Add(1)
 
 		go func() {
@@ -60,11 +61,12 @@ func (b *BageVpsStockNotifier) Notify() {
 			res, err := b.cli.R().Get(u)
 
 			if err != nil {
-				log.WithField("url", u).Errorf("Error fetching url: %v", err)
+				log.WithField("url", u).Errorf("[bage] Error fetching url: %v", err)
 				return
 			}
 			if res.StatusCode() != 200 {
-				log.WithField("status", res.StatusCode()).WithField("url", u).Error("Error fetching url")
+				log.WithField("status", res.StatusCode()).WithField("url", u).Error("[bage] Error fetching url")
+
 				return
 			}
 			v := b.parseResponse(product.Kind, res.String())

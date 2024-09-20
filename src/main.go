@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -67,6 +69,16 @@ func initHaloVM(vps vars.VPS, notifier stock.BotNotifier) {
 	}()
 }
 
+func getAbsolutePath() string {
+	// 获取当前可执行文件的路径
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatalf("os.Executable() failed: %v", err)
+	}
+	// 获取绝对路径
+	return filepath.Dir(exe)
+}
+
 func generateStartupMsg(title string, vps vars.VPS) string {
 
 	startMsg := fmt.Sprintf("* %s: *\n\n", title)
@@ -80,9 +92,19 @@ func generateStartupMsg(title string, vps vars.VPS) string {
 }
 
 func main() {
-	log.SetFormatter(&log.JSONFormatter{})
+	log.SetFormatter(&log.JSONFormatter{
+		TimestampFormat: "2006-01-02 15:04:05",
+		PrettyPrint:     true,
+	})
 	log.SetLevel(log.InfoLevel)
-	log.SetOutput(os.Stdout)
+
+	file, err := os.OpenFile(filepath.Join(getAbsolutePath(), "stock.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	log.SetOutput(file)
 
 	flag.Parse()
 
@@ -129,6 +151,16 @@ func main() {
 	bot.Notify(map[string]interface{}{
 		"text": startMsg,
 	})
-	fmt.Println("Listening......")
+
+	// 定义路由
+	http.HandleFunc("/log", func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		http.ServeFile(writer, request, filepath.Join(getAbsolutePath(), "stock.log"))
+	})
+
+	if err := http.ListenAndServe(":9527", nil); err != nil {
+		log.Fatalf("start web server failure : %v", err)
+	}
+	fmt.Println("Listen On :9527......")
 	select {}
 }

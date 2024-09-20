@@ -29,10 +29,6 @@ vps:
     baseUrl: https://my.halocloud.net
     productUrl: https://my.halocloud.net/index.php?rp=/store/
     products:
-#      - name: singapore-singapore-bgp
-#        kind:
-#          - Singapore BGP VPS-500GB
-      
       - name: tokyo-japan-bgp
         kind:
           - Tokyo Japan BGP VPS-Traffic billing
