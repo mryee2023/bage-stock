@@ -1,21 +1,12 @@
 APP=bagevm-stock
-
-.PHONY: help all build windows linux darwin
-
-help:
-        @echo "usage: make <option>"
-        @echo "options and effects:"
-        @echo "    help   : Show help"
-        @echo "    all    : Build multiple binary of this project"
-        @echo "    build  : Build the binary of this project for current platform"
-        @echo "    windows: Build the windows binary of this project"
-        @echo "    linux  : Build the linux binary of this project"
-        @echo "    darwin : Build the darwin binary of this project"
+.PHONY: all windows linux darwin
 all: windows linux darwin
-
-windows:
-        GOOS=windows go build -o bin/${APP}-windows src/main.go
-linux:
-        GOOS=linux go build -o bin/${APP}-linux src/main.go
-darwin:
-        GOOS=darwin go build -o bin/${APP}-darwin src/main.go
+windows: bin/${APP}-win-64.exe
+linux: bin/${APP}-linux-amd64
+darwin: bin/${APP}-macos-arm64
+bin/${APP}-win-64.exe: src/main.go
+	GOOS=windows GOARCH=amd64 go build -o $@ src/main.go
+bin/${APP}-linux-amd64: src/main.go
+	GOOS=linux GOARCH=amd64 go build -o $@ src/main.go
+bin/${APP}-macos-arm64: src/main.go
+	GOOS=darwin GOARCH=arm64 go build -o $@ src/main.go

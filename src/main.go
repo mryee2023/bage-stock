@@ -20,14 +20,30 @@ import (
 )
 
 var cli *resty.Client
-var notified map[string]struct{}
+var notified map[string]time.Time
+var mapLock sync.Mutex
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(log.InfoLevel)
 	log.SetOutput(os.Stdout)
 	cli = resty.New()
-	notified = make(map[string]struct{})
+	notified = make(map[string]time.Time)
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+		for {
+			select {
+			case <-ticker.C:
+				mapLock.Lock()
+				for k, v := range notified {
+					if time.Since(v) > 30*time.Minute {
+						delete(notified, k)
+					}
+				}
+				mapLock.Unlock()
+			}
+		}
+	}()
 }
 
 type VpsStockNotifier interface {
@@ -172,7 +188,9 @@ func (b *BageVpsStockNotifier) Notify() {
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
-			notified[item.ProductName] = struct{}{}
+			mapLock.Lock()
+			notified[item.ProductName] = time.Now()
+			mapLock.Unlock()
 		}
 	}
 	if sendMsg {

@@ -1,0 +1,17 @@
+[Unit]
+Description=BageVM Stock Bot
+After=network.target
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+LimitNOFILE=32768
+ExecStart=/usr/local/bin/bagevm-stock-linux-amd64 -c /etc/bage/config.yaml
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=bagevm
+
+[Install]
+WantedBy=multi-user.target
