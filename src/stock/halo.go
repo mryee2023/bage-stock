@@ -52,7 +52,7 @@ func (b *HaloVpsStockNotifier) Notify() {
 				return
 			}
 			if res.StatusCode() != 200 {
-				log.WithField("status", res.StatusCode()).Error("Error fetching url")
+				log.WithField("status", res.StatusCode()).WithField("url", u).Error("Error fetching url")
 				return
 			}
 			v := b.parseResponse(product.Kind, res.String())
