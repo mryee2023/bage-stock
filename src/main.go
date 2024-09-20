@@ -18,16 +18,17 @@ import (
 
 var configFile = flag.String("f", "etc/config.yaml", "the config file")
 var config vars.Config
+var bot stock.BotNotifier
 
-func createBot() stock.BotNotifier {
+func createBot() {
 	platform := strings.TrimSpace(strings.ToLower(config.Notify.Platform))
 	switch platform {
 	case "bark":
-		return stock.NewBarkNotifier(config.Notify.Key)
+		bot = stock.NewBarkNotifier(config.Notify.Key)
 	case "telegram":
-		return stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
+		bot = stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
 	}
-	return nil
+
 }
 
 // 监控配置文件变化
@@ -49,7 +50,15 @@ func watchConfig(filePath string) {
 				return
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				log.WithField("event", event).WithField("file", filePath).Info("配置文件被修改")
+				b, err := os.ReadFile(filePath)
+				if err != nil {
+					log.Errorf("read config failure :%s, %v", filePath, err)
+				}
+				err = yaml.Unmarshal(b, &config)
+				if err != nil {
+					log.Fatalf("unmarshal config failure: %v", err)
+				}
+				log.WithField("event", event).WithField("file", filePath).Info("配置文件已重新加载")
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
@@ -60,40 +69,48 @@ func watchConfig(filePath string) {
 	}
 }
 
-func initBageVM(vps vars.VPS, notifier stock.BotNotifier) {
-	p := stock.NewBageVpsStockNotifier(vps, notifier)
-	d, e := time.ParseDuration(config.CheckTime)
-	if e != nil {
-		log.Fatalf("error: %v", e)
-	}
+func startBageVM(vps vars.VPS, notifier stock.BotNotifier) {
 
-	go func() {
-		p.Notify()
-		ticker := time.NewTicker(d)
-		for {
-			select {
-			case <-ticker.C:
-				p.Notify()
-			default:
-			}
-		}
+	defer func() {
+		stock.CatchGoroutinePanic()
 	}()
+	p := stock.NewBageVpsStockNotifier(vps, notifier)
+	p.Notify()
+
 }
 
-func initHaloVM(vps vars.VPS, notifier stock.BotNotifier) {
+func startHaloVM(vps vars.VPS, notifier stock.BotNotifier) {
+	defer func() {
+		stock.CatchGoroutinePanic()
+	}()
 	p := stock.NewHaloVpsStockNotifier(vps, notifier)
+	p.Notify()
+}
+
+func StartVpsWatch() {
+	for _, vps := range config.VPS {
+		if vps.Name == "bagevm" {
+			startBageVM(vps, bot)
+			continue
+		}
+		if vps.Name == "halo" {
+			startHaloVM(vps, bot)
+			continue
+		}
+	}
+}
+func initVpsWatch() {
 	d, e := time.ParseDuration(config.CheckTime)
 	if e != nil {
 		log.Fatalf("error: %v", e)
 	}
 
 	go func() {
-		p.Notify()
 		ticker := time.NewTicker(d)
 		for {
 			select {
 			case <-ticker.C:
-				p.Notify()
+				StartVpsWatch()
 			default:
 			}
 		}
@@ -155,7 +172,7 @@ func main() {
 	}
 	stock.StartFrozen(d)
 
-	bot := createBot()
+	createBot()
 	if bot == nil {
 		log.Fatalf("error: invalid bot platform")
 	}
@@ -171,16 +188,16 @@ func main() {
 	for _, vps := range config.VPS {
 		if vps.Name == "bagevm" {
 			startMsg += generateStartupMsg("BageVM", vps)
-			initBageVM(vps, bot)
+			//initBageVM(vps, bot)
 			continue
 		}
 		if vps.Name == "halo" {
 			startMsg += generateStartupMsg("HaloCloud", vps)
-			initHaloVM(vps, bot)
+			//initHaloVM(vps, bot)
 			continue
 		}
 	}
-
+	initVpsWatch()
 	startMsg += "当前设定的检查时间间隔为: *" + config.CheckTime + "* \n\n"
 	startMsg += "当前设定的冻结时间为: *" + config.Frozen + "* \n\n"
 
@@ -190,13 +207,12 @@ func main() {
 
 	// 定义路由
 	http.HandleFunc("/log", func(writer http.ResponseWriter, request *http.Request) {
-		writer.WriteHeader(http.StatusOK)
+		writer.Header().Set("Content-Type", "application/json")
 		http.ServeFile(writer, request, filepath.Join(getAbsolutePath(), "stock.log"))
 	})
-
+	log.Infof("Service start success,Listen On :9527......")
 	if err := http.ListenAndServe(":9527", nil); err != nil {
 		log.Fatalf("start web server failure : %v", err)
 	}
-	log.Infof("Service start success,Listen On :9527......")
-	select {}
+
 }
