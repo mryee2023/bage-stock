@@ -111,7 +111,7 @@ func initVpsWatch() {
 	if e != nil {
 		log.Fatalf("error: %v", e)
 	}
-	fmt.Println("initVpsWatch")
+	log.Infof("init vps watching...... %s", config.CheckTime)
 	go func() {
 		ticker := time.NewTicker(d)
 		defer func() {
