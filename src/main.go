@@ -21,6 +21,10 @@ import (
 var configFile = flag.String("f", "etc/config.yaml", "the config file")
 var config vars.Config
 var bot stock.BotNotifier
+var (
+	BageKindStock = make(map[string]int)
+	HaloKindStock = make(map[string]int)
+)
 
 func createBot() {
 	platform := strings.TrimSpace(strings.ToLower(config.Notify.Platform))
@@ -78,7 +82,7 @@ func startBageVM(vps vars.VPS, notifier stock.BotNotifier) {
 	defer func() {
 		stock.CatchGoroutinePanic()
 	}()
-	p := stock.NewBageVpsStockNotifier(vps, notifier)
+	p := stock.NewBageVpsStockNotifier(vps, notifier, BageKindStock)
 	p.Notify()
 
 }
@@ -87,7 +91,8 @@ func startHaloVM(vps vars.VPS, notifier stock.BotNotifier) {
 	defer func() {
 		stock.CatchGoroutinePanic()
 	}()
-	p := stock.NewHaloVpsStockNotifier(vps, notifier)
+
+	p := stock.NewHaloVpsStockNotifier(vps, notifier, HaloKindStock)
 	p.Notify()
 }
 
@@ -178,11 +183,11 @@ func main() {
 		log.Fatalf("unmarshal config failure: %v", err)
 	}
 
-	d, e := time.ParseDuration(config.Frozen)
-	if e != nil {
-		log.Fatalf("parse frozen duration failure: %s, %v", config.Frozen, e)
-	}
-	stock.StartFrozen(d)
+	//d, e := time.ParseDuration(config.Frozen)
+	//if e != nil {
+	//	log.Fatalf("parse frozen duration failure: %s, %v", config.Frozen, e)
+	//}
+	//stock.StartFrozen(d)
 
 	createBot()
 	if bot == nil {
@@ -200,23 +205,21 @@ func main() {
 	for _, vps := range config.VPS {
 		if vps.Name == "bagevm" {
 			startMsg += generateStartupMsg("BageVM", vps)
-			//initBageVM(vps, bot)
 			continue
 		}
 		if vps.Name == "halo" {
 			startMsg += generateStartupMsg("HaloCloud", vps)
-			//initHaloVM(vps, bot)
 			continue
 		}
 	}
-	initVpsWatch()
+
 	startMsg += "当前设定的检查时间间隔为: *" + config.CheckTime + "* \n\n"
 	startMsg += "当前设定的冻结时间为: *" + config.Frozen + "* \n\n"
 
 	bot.Notify(map[string]interface{}{
 		"text": startMsg,
 	})
-
+	initVpsWatch()
 	// 定义路由
 	http.HandleFunc("/log", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")

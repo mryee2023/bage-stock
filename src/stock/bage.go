@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-resty/resty/v2"
@@ -24,19 +23,21 @@ type VpsStockNotifier interface {
 }
 
 type BageVpsStockNotifier struct {
-	cli *resty.Client
-	vps vars.VPS
-	bot BotNotifier
+	cli       *resty.Client
+	vps       vars.VPS
+	bot       BotNotifier
+	kindStock map[string]int
 }
 
-func NewBageVpsStockNotifier(vps vars.VPS, bot BotNotifier) *BageVpsStockNotifier {
+func NewBageVpsStockNotifier(vps vars.VPS, bot BotNotifier, kindStock map[string]int) *BageVpsStockNotifier {
 	cli := resty.New().SetDebug(false)
 	cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 	cli.Header.Add("Referer", vps.BaseURL)
 	return &BageVpsStockNotifier{
-		vps: vps,
-		bot: bot,
-		cli: cli,
+		vps:       vps,
+		bot:       bot,
+		cli:       cli,
+		kindStock: kindStock,
 	}
 }
 
@@ -86,17 +87,18 @@ func (b *BageVpsStockNotifier) Notify() {
 	wg.Wait()
 	var body = "📢 *BageVM 库存通知*\n\n"
 	var sendMsg bool
+
+	fmt.Println(b.kindStock)
+
 	for _, item := range items {
 		if item.Available > 0 {
-			if _, ok := notified[item.ProductName]; ok {
+			if v, ok := b.kindStock[item.ProductName]; ok && v == item.Available { // 库存未变化, 不发送通知
 				continue
 			}
+			b.kindStock[item.ProductName] = item.Available
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
-			mapLock.Lock()
-			notified[item.ProductName] = time.Now()
-			mapLock.Unlock()
 		}
 	}
 	if sendMsg {

@@ -46,4 +46,4 @@ notify:
 checkTime: 1m
 
 #发现库存后的冷却时间,即关注的商品有库存后,在冷却时间内不再提醒
-frozen: 10m
+frozen: 2m
