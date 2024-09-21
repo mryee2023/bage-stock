@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/fsnotify/fsnotify"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -59,6 +61,8 @@ func watchConfig(filePath string) {
 					log.Fatalf("unmarshal config failure: %v", err)
 				}
 				log.WithField("event", event).WithField("file", filePath).Info("配置文件已重新加载")
+				breakChan <- struct{}{}
+				initVpsWatch()
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
@@ -99,19 +103,27 @@ func StartVpsWatch() {
 		}
 	}
 }
+
+var breakChan = make(chan struct{})
+
 func initVpsWatch() {
 	d, e := time.ParseDuration(config.CheckTime)
 	if e != nil {
 		log.Fatalf("error: %v", e)
 	}
-
+	fmt.Println("initVpsWatch")
 	go func() {
 		ticker := time.NewTicker(d)
+		defer func() {
+			ticker.Stop()
+			stock.CatchGoroutinePanic()
+		}()
 		for {
 			select {
 			case <-ticker.C:
 				StartVpsWatch()
-			default:
+			case <-breakChan:
+				return
 			}
 		}
 	}()
