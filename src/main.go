@@ -53,9 +53,10 @@ func watchConfig(filePath string) {
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
+				log.Infof("watcher event failure")
 				return
 			}
-			if event.Op&fsnotify.Write == fsnotify.Write {
+			if event.Has(fsnotify.Write) {
 				b, err := os.ReadFile(filePath)
 				if err != nil {
 					log.Errorf("read config failure :%s, %v", filePath, err)
