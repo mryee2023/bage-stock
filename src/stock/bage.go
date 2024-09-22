@@ -88,8 +88,6 @@ func (b *BageVpsStockNotifier) Notify() {
 	var body = "📢 *BageVM 库存通知*\n\n"
 	var sendMsg bool
 
-	fmt.Println(b.kindStock)
-
 	for _, item := range items {
 		if item.Available > 0 {
 			if v, ok := b.kindStock[item.ProductName]; ok && v == item.Available { // 库存未变化, 不发送通知
