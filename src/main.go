@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -156,8 +157,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer file.Close()
-	log.SetOutput(file)
-	log.SetOutput(os.Stdout)
+	//log.SetOutput(file)
+	//log.SetOutput(os.Stdout)
+	log.SetOutput(io.MultiWriter(file, os.Stdout))
 	flag.Parse()
 
 	b, err := os.ReadFile(*configFile)
