@@ -1,14 +1,16 @@
 module vps-stock
 
-go 1.23
+go 1.20
 
 require (
-	github.com/PuerkitoBio/goquery v1.10.0
+	github.com/PuerkitoBio/goquery v1.9.3
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-resty/resty/v2 v2.15.1
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
+	github.com/golang-module/carbon/v2 v2.3.12
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cast v1.7.0
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

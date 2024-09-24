@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-resty/resty/v2"
@@ -58,7 +59,7 @@ func (b *BageVpsStockNotifier) Notify() {
 		u := b.vps.ProductUrl + product.Name
 		log.WithField("url", u).Trace("[bage] fetching url")
 		wg.Add(1)
-
+		atomic.AddInt64(&TotalQuery, 1)
 		go func() {
 			defer func() {
 				wg.Done()
@@ -68,7 +69,7 @@ func (b *BageVpsStockNotifier) Notify() {
 			res, err := b.cli.R().Get(u)
 
 			if err != nil {
-				log.WithField("url", u).Warn("[bage] Error fetching url: %v", err)
+				log.WithField("url", u).Warnf("[bage] Error fetching url: %v", err)
 				return
 			}
 			if res.StatusCode() != 200 {
@@ -115,7 +116,7 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
 
 	if err != nil {
-		log.Warn("[bage]Error parsing response: %v", err)
+		log.Warnf("[bage]Error parsing response: %v", err)
 		return nil
 	}
 
