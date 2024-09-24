@@ -16,6 +16,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/golang-module/carbon/v2"
 	log "github.com/sirupsen/logrus"
+	"github.com/zeromicro/go-zero/core/collection"
 	"gopkg.in/yaml.v3"
 	"vps-stock/src/stock"
 	"vps-stock/src/stock/vars"
@@ -161,6 +162,7 @@ func generateStartupMsg(title string, vps vars.VPS) string {
 }
 
 func initTgBotUpdates() {
+
 	defer func() {
 		stock.CatchGoroutinePanic()
 	}()
@@ -170,7 +172,11 @@ func initTgBotUpdates() {
 	}
 
 	bot.Debug = false
-
+	tw, _ := collection.NewTimingWheel(time.Second, 120, func(key, value any) {
+		if k, ok := key.(tgbotapi.DeleteMessageConfig); ok {
+			bot.Request(k)
+		}
+	})
 	log.Infof("Authorized on account %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
@@ -186,7 +192,6 @@ func initTgBotUpdates() {
 			continue
 		}
 		var msg tgbotapi.MessageConfig
-
 		switch update.Message.Command() {
 		case "start":
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, welcome())
@@ -204,24 +209,15 @@ func initTgBotUpdates() {
 		if err != nil {
 			log.Errorf("send message failure: %v", err)
 		} else {
-			go func() {
-				defer func() {
-					stock.CatchGoroutinePanic()
-				}()
-				ticker := time.NewTicker(time.Second * 5)
-				defer ticker.Stop()
-				select {
-				case <-ticker.C:
-					bot.Request(tgbotapi.DeleteMessageConfig{
-						ChatID:    m.Chat.ID,
-						MessageID: m.MessageID,
-					})
-					bot.Request(tgbotapi.DeleteMessageConfig{
-						ChatID:    update.Message.Chat.ID,
-						MessageID: update.Message.MessageID,
-					})
-				}
-			}()
+			tw.SetTimer(tgbotapi.DeleteMessageConfig{
+				ChatID:    m.Chat.ID,
+				MessageID: m.MessageID,
+			}, "", time.Second*5)
+			tw.SetTimer(tgbotapi.DeleteMessageConfig{
+				ChatID:    update.Message.Chat.ID,
+				MessageID: update.Message.MessageID,
+			}, "", time.Second*5)
+
 		}
 	}
 	fmt.Println("initTgBotUpdates end")
