@@ -101,12 +101,7 @@ func (b *BageVpsStockNotifier) Notify() {
 		}
 	}
 	if sendMsg {
-		b.bot.Notify(map[string]interface{}{
-			"title": "BageVM库存通知",
-			"body":  body,
-			"group": "BageVM",
-			"text":  body,
-		})
+		b.bot.Notify(NotifyMessage{Text: body})
 	}
 }
 func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {

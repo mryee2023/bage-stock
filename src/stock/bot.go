@@ -1,24 +1,20 @@
 package stock
 
 import (
-	"github.com/go-resty/resty/v2"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 )
 
+type NotifyMessage struct {
+	Text   string
+	ChatId *int64
+}
+
+var AlertId = int64(-1002322760704)
+
 type BotNotifier interface {
-	Notify(map[string]interface{})
-}
-
-type BarkNotifier struct {
-	deviceToken string
-}
-
-func NewBarkNotifier(deviceToken string) *BarkNotifier {
-	return &BarkNotifier{
-		deviceToken: deviceToken,
-	}
+	Notify(NotifyMessage)
 }
 
 type TelegramNotifier struct {
@@ -33,7 +29,7 @@ func NewTelegramNotifier(botToken string, chatId string) *TelegramNotifier {
 	}
 }
 
-func (t *TelegramNotifier) Notify(msg map[string]interface{}) {
+func (t *TelegramNotifier) Notify(msg NotifyMessage) {
 	tg := TgBotInstance()
 	if tg == nil {
 		return
@@ -41,22 +37,13 @@ func (t *TelegramNotifier) Notify(msg map[string]interface{}) {
 	defer func() {
 		CatchGoroutinePanic()
 	}()
-	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), msg["text"].(string))
-	tgMsg.ParseMode = tgbotapi.ModeMarkdown
-	tg.Send(tgMsg)
-
-}
-
-func (b *BarkNotifier) Notify(msg map[string]interface{}) {
-	cli := resty.New().SetDebug(false)
-	//msg["parse_mode"] = "MarkdownV2"
-	s, err := cli.R().SetBody(msg).
-		Post("https://api.day.app/" + b.deviceToken)
-	if err != nil {
-		log.Errorf("Error sending notification: %v", err)
-		return
+	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), msg.Text)
+	if msg.ChatId != nil {
+		tgMsg.ChatID = *msg.ChatId
 	}
-	if s.StatusCode() != 200 {
-		log.Errorf("Error sending notification: %d", s.StatusCode())
+	tgMsg.ParseMode = tgbotapi.ModeMarkdown
+	_, e := tg.Send(tgMsg)
+	if e != nil {
+		log.WithField("error", e).Error("send telegram message error")
 	}
 }

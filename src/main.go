@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	_ "net/http/pprof"
@@ -26,17 +25,6 @@ var (
 	BageKindStock = make(map[string]int)
 	HaloKindStock = make(map[string]int)
 )
-
-func createBot() {
-	platform := strings.TrimSpace(strings.ToLower(config.Notify.Platform))
-	switch platform {
-	case "bark":
-		bot = stock.NewBarkNotifier(config.Notify.Key)
-	case "telegram":
-		bot = stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
-	}
-
-}
 
 // 监控配置文件变化
 func watchConfig(filePath string) {
@@ -182,15 +170,13 @@ func main() {
 		log.Fatalf("unmarshal config failure: %v", err)
 	}
 
-	createBot()
+	bot = stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)
 	if bot == nil {
 		log.Fatalf("error: invalid bot platform")
 	}
 
 	proc.AddShutdownListener(func() {
-		bot.Notify(map[string]interface{}{
-			"text": "⚠️ BageVM 库存监控服务已停止",
-		})
+		bot.Notify(stock.NotifyMessage{Text: "⚠️ BageVM 库存监控服务已停止", ChatId: &stock.AlertId})
 		log.Info("service shutdown")
 	})
 
@@ -203,15 +189,9 @@ func main() {
 
 	initVpsWatch()
 
-	go func() {
-		defer func() {
-			stock.CatchGoroutinePanic()
-		}()
-		stock.InitTgBotListen(config.Notify.Key)
-		bot.Notify(map[string]interface{}{
-			"text": "📢 BageVM 库存监控服务已启动",
-		})
-	}()
+	stock.InitTgBotListen(config.Notify.Key)
+
+	bot.Notify(stock.NotifyMessage{Text: "📢 BageVM 库存监控服务已启动", ChatId: &stock.AlertId})
 
 	// 定义路由
 	http.HandleFunc("/log", func(writer http.ResponseWriter, request *http.Request) {

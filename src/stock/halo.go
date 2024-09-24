@@ -88,12 +88,7 @@ func (b *HaloVpsStockNotifier) Notify() {
 		}
 	}
 	if sendMsg {
-		b.bot.Notify(map[string]interface{}{
-			"title": "Halo库存通知",
-			"body":  body,
-			"group": "Halo",
-			"text":  body,
-		})
+		b.bot.Notify(NotifyMessage{Text: body})
 	}
 }
 func (b *HaloVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
