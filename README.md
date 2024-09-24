@@ -1,20 +1,35 @@
-### 📢 VPS库存通知 已启动
+## BageVM: 
 
-## BageVM:
 ### tw-hinet-vds
-#### Hinet Dynamic 600M
+
+    Hinet Dynamic 600M
+
+
 
 ### hong-kong-servers
-> 
-> > Hong Kong - TINY
-> > los-angeles-servers\n
-> > Los Angeles - TINY\n
-> > singapore-servers\n
-> > Singapore - SMALL\n
-> > japan-servers\n
-> > Japan - SMALL\n
-> > united-kingdom-servers\n
-> > United Kingdom - TINY\n\n
+
+    Hong Kong - TINY , Hong Kong - SMALL
+
+### los-angeles-servers
+
+    Los Angeles - TINY
+
+### singapore-servers
+
+    - Singapore - SMALL
+
+### japan-servers
+
+    - Japan - SMALL
+
+### united-kingdom-servers
+
+    - United Kingdom - TINY
 
 
-### Halo: > tokyo-japan-bgp\n> Tokyo Japan BGP VPS-Traffic billing\n\n-----------------\n
+
+## Halo:
+
+### tokyo-japan-bgp
+
+    - Tokyo Japan BGP VPS-Traffic billing

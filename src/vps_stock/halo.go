@@ -135,7 +135,7 @@ func (b *HaloVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 		buyUrl, _ := s.Find("a.btn-order-now").Attr("href")
 		//[Markdown语法](https://markdown.com.cn)
 		item.BuyUrl = b.vps.BaseURL + buyUrl
-		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl+"&aff=65")
+		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl)
 		rtn = append(rtn, item)
 	})
 	return rtn

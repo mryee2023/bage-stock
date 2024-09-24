@@ -145,7 +145,7 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 
 		buyUrl, _ := s.Find("div.proprice a.btn").Attr("href")
 		item.BuyUrl = b.vps.BaseURL + "/" + buyUrl
-		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl+"&aff=164")
+		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl)
 
 		rtn = append(rtn, item)
 	})

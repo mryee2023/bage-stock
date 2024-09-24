@@ -9,6 +9,7 @@ import (
 
 	"bage/src/vps_stock"
 	"bage/src/vps_stock/vars"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
@@ -66,6 +67,90 @@ func initHaloVM(vps vars.VPS, notifier vps_stock.BotNotifier) {
 		}
 	}()
 }
+func startupInfo() string {
+	var startMsg string
+	for _, vps := range config.VPS {
+		if vps.Name == "bagevm" {
+			startMsg += fmt.Sprintf("* BageVM: *\n\n")
+			for _, product := range vps.Products {
+				//startMsg += fmt.Sprintf("> %s\n\n", product.Name)
+				startMsg += fmt.Sprintf("> %s\n\n", strings.Join(product.Kind, " , "))
+
+			}
+			startMsg += fmt.Sprintf("\n\n")
+			continue
+		}
+		if vps.Name == "halo" {
+			startMsg += fmt.Sprintf("* Halo: *\n\n")
+			for _, product := range vps.Products {
+				//startMsg += fmt.Sprintf("> %s\n\n", product.Name)
+				startMsg += fmt.Sprintf("%s", strings.Join(product.Kind, "   \n\n"))
+			}
+			startMsg += fmt.Sprintf("\n\n")
+			continue
+		}
+	}
+	return startMsg
+}
+func initUpdates() {
+	defer func() {
+		vps_stock.CatchGoroutinePanic()
+	}()
+	bot, err := tgbotapi.NewBotAPI(config.Notify.Key)
+	if err != nil {
+		log.Fatalf("create tgbot failure: %v", err)
+	}
+	tgbotapi.NewSetMyCommands(tgbotapi.BotCommand{
+		Command:     "info",
+		Description: "显示启动信息",
+	}, tgbotapi.BotCommand{
+		Command:     "status",
+		Description: "显示运行状态",
+	})
+
+	log.Infof("Authorized on account %s", bot.Self.UserName)
+
+	u := tgbotapi.NewUpdate(0)
+	u.Timeout = 60
+	updates := bot.GetUpdatesChan(u)
+	for update := range updates {
+		if update.Message == nil { // ignore any non-Message updates
+			continue
+		}
+		if !update.Message.IsCommand() { // ignore any non-command Messages
+			continue
+		}
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "")
+		switch update.Message.Command() {
+		case "info":
+			msg.Text = startupInfo()
+		case "status":
+			msg.Text = "running since " + startTime.Format("2006-01-02 15:04:05")
+		default:
+			msg.Text = "I don't know that command"
+		}
+		msg.ParseMode = tgbotapi.ModeMarkdown
+		msg.ReplyToMessageID = update.Message.MessageID
+		if _, err := bot.Send(msg); err != nil {
+			log.WithField("command", update.Message.Command()).Errorf("send message failure: %v", err)
+		}
+
+		// delete command message after reply
+		tout := time.NewTicker(5 * time.Second)
+		update := update
+		go func() {
+			deleteMessageConfig := tgbotapi.DeleteMessageConfig{
+				ChatID:    update.Message.Chat.ID,
+				MessageID: update.Message.MessageID,
+			}
+			<-tout.C
+			bot.Request(deleteMessageConfig)
+		}()
+
+	}
+}
+
+var startTime = time.Now()
 
 func main() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -125,9 +210,10 @@ func main() {
 	startMsg += "当前设定的检查时间间隔为: *" + config.CheckTime + "* \n\n"
 	startMsg += "当前设定的冻结时间为: *" + config.Frozen + "* \n\n"
 
-	bot.Notify(map[string]interface{}{
-		"text": startMsg,
-	})
+	//bot.Notify(map[string]interface{}{
+	//	"text": startMsg,
+	//})
 	fmt.Println("Listening......")
+	go initUpdates()
 	select {}
 }
