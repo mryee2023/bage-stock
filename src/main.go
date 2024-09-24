@@ -174,7 +174,12 @@ func initTgBotUpdates() {
 	bot.Debug = false
 	tw, _ := collection.NewTimingWheel(time.Second, 120, func(key, value any) {
 		if k, ok := key.(tgbotapi.DeleteMessageConfig); ok {
-			bot.Request(k)
+			rtn, err := bot.Request(k)
+			if err != nil {
+				log.WithField("msg", k).Errorf("delete message failure: %v", err)
+			} else {
+				log.WithField("msg", k).Infof("delete message rtn: %s", string(rtn.Result))
+			}
 		}
 	})
 	log.Infof("Authorized on account %s", bot.Self.UserName)
@@ -183,7 +188,7 @@ func initTgBotUpdates() {
 	u.Timeout = 60
 
 	updates := bot.GetUpdatesChan(u)
-
+	var autoDeleteMsg = "\n\n⚠️消息5秒后自动删除"
 	for update := range updates {
 		if update.Message == nil {
 			continue
@@ -194,10 +199,13 @@ func initTgBotUpdates() {
 		var msg tgbotapi.MessageConfig
 		switch update.Message.Command() {
 		case "start":
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, welcome())
+			m := welcome() + autoDeleteMsg
+
+			msg = tgbotapi.NewMessage(update.Message.Chat.ID, m)
 		case "status":
 			cStart := carbon.CreateFromStdTime(startTime)
 			m := fmt.Sprintf("启动时间: %s\n查询次数: %d", cStart.DiffForHumans(), atomic.LoadInt64(&stock.TotalQuery))
+			m += autoDeleteMsg
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, m)
 		default:
 			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "I don't know that command")

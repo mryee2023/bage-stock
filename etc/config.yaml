@@ -40,7 +40,7 @@ notify:
 #  chatId:       #telegram chat id
   platform: telegram
   key: 7727116717:AAH31RbD5ygRkuWGO1EaCcfKybAoirykxaY
-  chatId: -1002300430322 #-4558057968
+  chatId: -1002398248297 #-4558057968
 
 #监控间隔时间
 checkTime: 1m
