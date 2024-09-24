@@ -22,10 +22,6 @@ import (
 var configFile = flag.String("f", "etc/config.yaml", "the config file")
 var config vars.Config
 var bot stock.BotNotifier
-var (
-	BageKindStock = make(map[string]int)
-	HaloKindStock = make(map[string]int)
-)
 
 // 监控配置文件变化
 func watchConfig(filePath string) {
@@ -73,7 +69,7 @@ func startBageVM(vps vars.VPS, notifier stock.BotNotifier) {
 	defer func() {
 		stock.CatchGoroutinePanic()
 	}()
-	p := stock.NewBageVpsStockNotifier(vps, notifier, BageKindStock)
+	p := stock.NewBageVpsStockNotifier(vps, notifier)
 	p.Notify()
 
 }
@@ -83,7 +79,7 @@ func startHaloVM(vps vars.VPS, notifier stock.BotNotifier) {
 		stock.CatchGoroutinePanic()
 	}()
 
-	p := stock.NewHaloVpsStockNotifier(vps, notifier, HaloKindStock)
+	p := stock.NewHaloVpsStockNotifier(vps, notifier)
 	p.Notify()
 }
 
@@ -192,6 +188,7 @@ func main() {
 	initVpsWatch()
 
 	stock.InitTgBotListen(config.Notify.Key)
+	stock.NewServiceCtx(stock.TgBotInstance(), &config)
 
 	bot.Notify(stock.NotifyMessage{Text: "📢 BageVM 库存监控服务已启动", ChatId: &stock.AlertId})
 

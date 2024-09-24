@@ -10,25 +10,24 @@ import (
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+	"vps-stock/src/stock/db"
 	"vps-stock/src/stock/vars"
 )
 
 type HaloVpsStockNotifier struct {
-	vps       vars.VPS
-	bot       BotNotifier
-	cli       *resty.Client
-	kindStock map[string]int
+	vps vars.VPS
+	bot BotNotifier
+	cli *resty.Client
 }
 
-func NewHaloVpsStockNotifier(vps vars.VPS, bot BotNotifier, kindStock map[string]int) *HaloVpsStockNotifier {
+func NewHaloVpsStockNotifier(vps vars.VPS, bot BotNotifier) *HaloVpsStockNotifier {
 	cli := resty.New().SetDebug(false)
 	cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 	cli.Header.Add("Referer", vps.BaseURL)
 	return &HaloVpsStockNotifier{
-		vps:       vps,
-		bot:       bot,
-		cli:       cli,
-		kindStock: kindStock,
+		vps: vps,
+		bot: bot,
+		cli: cli,
 	}
 }
 
@@ -76,12 +75,27 @@ func (b *HaloVpsStockNotifier) Notify() {
 	var sendMsg bool
 	for _, item := range items {
 		if item.Available > 0 {
-			if v, ok := b.kindStock[item.ProductName]; ok {
-				if v == item.Available { // 库存未变化, 不发送通知
+			//if v, ok := b.kindStock[item.ProductName]; ok {
+			//	if v == item.Available { // 库存未变化, 不发送通知
+			//		continue
+			//	}
+			//}
+			//b.kindStock[item.ProductName] = item.Available
+
+			exists, _ := db.GetKindByKind(item.ProductName)
+			if exists != nil {
+				if exists.Stock == item.Available {
 					continue
 				}
+				exists.Stock = item.Available
+			} else {
+				exists = &db.Kind{
+					Kind:  item.ProductName,
+					Stock: item.Available,
+				}
 			}
-			b.kindStock[item.ProductName] = item.Available
+			db.AddOrUpdateKind(exists)
+
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)

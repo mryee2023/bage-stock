@@ -26,4 +26,5 @@ type Config struct {
 	Notify    Notify `yaml:"notify"`
 	CheckTime string `yaml:"checkTime"`
 	Frozen    string `yaml:"frozen"`
+	Db        string `yaml:"db"`
 }

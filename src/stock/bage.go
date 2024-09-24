@@ -10,6 +10,7 @@ import (
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+	"vps-stock/src/stock/db"
 	"vps-stock/src/stock/vars"
 )
 
@@ -24,21 +25,21 @@ type VpsStockNotifier interface {
 }
 
 type BageVpsStockNotifier struct {
-	cli       *resty.Client
-	vps       vars.VPS
-	bot       BotNotifier
-	kindStock map[string]int
+	cli *resty.Client
+	vps vars.VPS
+	bot BotNotifier
 }
 
-func NewBageVpsStockNotifier(vps vars.VPS, bot BotNotifier, kindStock map[string]int) *BageVpsStockNotifier {
+func NewBageVpsStockNotifier(vps vars.VPS, bot BotNotifier) *BageVpsStockNotifier {
 	cli := resty.New().SetDebug(false)
 	cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
 	cli.Header.Add("Referer", vps.BaseURL)
 	return &BageVpsStockNotifier{
-		vps:       vps,
-		bot:       bot,
-		cli:       cli,
-		kindStock: kindStock,
+		vps: vps,
+		bot: bot,
+		cli: cli,
+
+		//kindStock: kindStock,
 	}
 }
 
@@ -91,10 +92,20 @@ func (b *BageVpsStockNotifier) Notify() {
 
 	for _, item := range items {
 		if item.Available > 0 {
-			if v, ok := b.kindStock[item.ProductName]; ok && v == item.Available { // 库存未变化, 不发送通知
-				continue
+
+			exists, _ := db.GetKindByKind(item.ProductName)
+			if exists != nil {
+				if exists.Stock == item.Available {
+					continue
+				}
+				exists.Stock = item.Available
+			} else {
+				exists = &db.Kind{
+					Kind:  item.ProductName,
+					Stock: item.Available,
+				}
 			}
-			b.kindStock[item.ProductName] = item.Available
+			db.AddOrUpdateKind(exists)
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
