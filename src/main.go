@@ -199,24 +199,30 @@ func initTgBotUpdates() {
 		}
 		msg.ParseMode = tgbotapi.ModeMarkdown
 		msg.ReplyToMessageID = update.Message.MessageID
+
 		m, err := bot.Send(msg)
 		if err != nil {
 			log.Errorf("send message failure: %v", err)
 		} else {
-
-			time.AfterFunc(5*time.Second, func() {
-				bot.Request(tgbotapi.DeleteMessageConfig{
-					ChatID:    m.Chat.ID,
-					MessageID: m.MessageID,
-				})
-				bot.Request(tgbotapi.DeleteMessageConfig{
-					ChatID:    update.Message.Chat.ID,
-					MessageID: update.Message.MessageID,
-				})
-			})
-
+			go func() {
+				defer func() {
+					stock.CatchGoroutinePanic()
+				}()
+				ticker := time.NewTicker(time.Second * 5)
+				defer ticker.Stop()
+				select {
+				case <-ticker.C:
+					bot.Request(tgbotapi.DeleteMessageConfig{
+						ChatID:    m.Chat.ID,
+						MessageID: m.MessageID,
+					})
+					bot.Request(tgbotapi.DeleteMessageConfig{
+						ChatID:    update.Message.Chat.ID,
+						MessageID: update.Message.MessageID,
+					})
+				}
+			}()
 		}
-
 	}
 	fmt.Println("initTgBotUpdates end")
 }
