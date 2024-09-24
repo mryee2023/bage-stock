@@ -255,6 +255,11 @@ func main() {
 		WeekStartsAt: carbon.Monday,
 		Locale:       "zh-CN",
 	})
+
+	defer func() {
+		stock.CatchGoroutinePanic()
+	}()
+
 	file, err := os.OpenFile(filepath.Join(getAbsolutePath(), "stock.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatal(err)
