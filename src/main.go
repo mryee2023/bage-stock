@@ -2,21 +2,18 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	_ "net/http/pprof"
 
 	"github.com/fsnotify/fsnotify"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/golang-module/carbon/v2"
 	log "github.com/sirupsen/logrus"
-	"github.com/zeromicro/go-zero/core/collection"
+	"github.com/zeromicro/go-zero/core/proc"
 	"gopkg.in/yaml.v3"
 	"vps-stock/src/stock"
 	"vps-stock/src/stock/vars"
@@ -149,108 +146,10 @@ func getAbsolutePath() string {
 	return filepath.Dir(exe)
 }
 
-func generateStartupMsg(title string, vps vars.VPS) string {
-
-	startMsg := fmt.Sprintf("* %s: *\n\n", title)
-	for _, product := range vps.Products {
-		startMsg += fmt.Sprintf("> %s\n\n", product.Name)
-		startMsg += fmt.Sprintf("   - %s\n\n", strings.Join(product.Kind, " , "))
-
-	}
-	startMsg += fmt.Sprintf("\n\n")
-	return startMsg
-}
-
-func initTgBotUpdates() {
-
-	defer func() {
-		stock.CatchGoroutinePanic()
-	}()
-	bot, err := tgbotapi.NewBotAPI(config.Notify.Key)
-	if err != nil {
-		log.Fatalf("tgbotapi init failure: %v", err)
-	}
-
-	bot.Debug = false
-	tw, _ := collection.NewTimingWheel(time.Second, 120, func(key, value any) {
-		if k, ok := key.(tgbotapi.DeleteMessageConfig); ok {
-			rtn, err := bot.Request(k)
-			if err != nil {
-				log.WithField("msg", k).Errorf("delete message failure: %v", err)
-			} else {
-				log.WithField("msg", k).Infof("delete message rtn: %s", string(rtn.Result))
-			}
-		}
-	})
-	log.Infof("Authorized on account %s", bot.Self.UserName)
-
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates := bot.GetUpdatesChan(u)
-	var autoDeleteMsg = "\n\n⚠️消息5秒后自动删除"
-	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
-		if !update.Message.IsCommand() {
-			continue
-		}
-		var msg tgbotapi.MessageConfig
-		switch update.Message.Command() {
-		case "start":
-			m := welcome() + autoDeleteMsg
-
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, m)
-		case "status":
-			cStart := carbon.CreateFromStdTime(startTime)
-			m := fmt.Sprintf("启动时间: %s\n查询次数: %d", cStart.DiffForHumans(), atomic.LoadInt64(&stock.TotalQuery))
-			m += autoDeleteMsg
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, m)
-		default:
-			msg = tgbotapi.NewMessage(update.Message.Chat.ID, "I don't know that command")
-		}
-		msg.ParseMode = tgbotapi.ModeMarkdown
-		msg.ReplyToMessageID = update.Message.MessageID
-
-		m, err := bot.Send(msg)
-		if err != nil {
-			log.Errorf("send message failure: %v", err)
-		} else {
-			tw.SetTimer(tgbotapi.DeleteMessageConfig{
-				ChatID:    m.Chat.ID,
-				MessageID: m.MessageID,
-			}, "", time.Second*5)
-			tw.SetTimer(tgbotapi.DeleteMessageConfig{
-				ChatID:    update.Message.Chat.ID,
-				MessageID: update.Message.MessageID,
-			}, "", time.Second*5)
-
-		}
-	}
-	fmt.Println("initTgBotUpdates end")
-}
-
-var startTime = time.Now()
-
-func welcome() string {
-	var startMsg string
-	for _, vps := range config.VPS {
-		if vps.Name == "bagevm" {
-			startMsg += generateStartupMsg("BageVM", vps)
-			continue
-		}
-		if vps.Name == "halo" {
-			startMsg += generateStartupMsg("HaloCloud", vps)
-			continue
-		}
-	}
-	return startMsg
-}
 func main() {
 	log.SetFormatter(&log.JSONFormatter{
 		TimestampFormat: "2006-01-02 15:04:05",
-		PrettyPrint:     true,
+		PrettyPrint:     false,
 	})
 	log.SetLevel(log.InfoLevel)
 	carbon.SetDefault(carbon.Default{
@@ -270,7 +169,7 @@ func main() {
 	}
 	defer file.Close()
 	log.SetOutput(file)
-	//log.SetOutput(os.Stdout)
+	log.SetOutput(os.Stdout)
 	flag.Parse()
 
 	b, err := os.ReadFile(*configFile)
@@ -288,6 +187,13 @@ func main() {
 		log.Fatalf("error: invalid bot platform")
 	}
 
+	proc.AddShutdownListener(func() {
+		bot.Notify(map[string]interface{}{
+			"text": "⚠️ BageVM 库存监控服务已停止",
+		})
+		log.Info("service shutdown")
+	})
+
 	go func() {
 		defer func() {
 			stock.CatchGoroutinePanic()
@@ -301,8 +207,12 @@ func main() {
 		defer func() {
 			stock.CatchGoroutinePanic()
 		}()
-		initTgBotUpdates()
+		stock.InitTgBotListen(config.Notify.Key)
+		bot.Notify(map[string]interface{}{
+			"text": "📢 BageVM 库存监控服务已启动",
+		})
 	}()
+
 	// 定义路由
 	http.HandleFunc("/log", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")

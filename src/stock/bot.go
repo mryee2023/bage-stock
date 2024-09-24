@@ -2,7 +2,9 @@ package stock
 
 import (
 	"github.com/go-resty/resty/v2"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cast"
 )
 
 type BotNotifier interface {
@@ -32,23 +34,17 @@ func NewTelegramNotifier(botToken string, chatId string) *TelegramNotifier {
 }
 
 func (t *TelegramNotifier) Notify(msg map[string]interface{}) {
-
-	log.WithField("msg", msg)
-	msg["parse_mode"] = "Markdown"
-	msg["disable_web_page_preview"] = false
+	tg := TgBotInstance()
+	if tg == nil {
+		return
+	}
 	defer func() {
 		CatchGoroutinePanic()
 	}()
-	cli := resty.New().SetDebug(false)
-	s, err := cli.R().SetBody(msg).
-		Post("https://api.telegram.org/bot" + t.botToken + "/sendMessage?chat_id=" + t.chatId)
-	if err != nil {
-		log.WithField("err", err.Error()).Warn("send telegram message failed")
-		return
-	}
-	if s.StatusCode() != 200 {
-		log.WithField("status", s.StatusCode()).Warn("send telegram message failed")
-	}
+	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), msg["text"].(string))
+	tgMsg.ParseMode = tgbotapi.ModeMarkdown
+	tg.Send(tgMsg)
+
 }
 
 func (b *BarkNotifier) Notify(msg map[string]interface{}) {
