@@ -1,4 +1,4 @@
-package vps_stock
+package stock
 
 import (
 	"github.com/go-resty/resty/v2"
@@ -38,17 +38,16 @@ func (t *TelegramNotifier) Notify(msg map[string]interface{}) {
 	msg["disable_web_page_preview"] = false
 	defer func() {
 		CatchGoroutinePanic()
-		log.Infof("telegram message sent")
 	}()
 	cli := resty.New().SetDebug(false)
 	s, err := cli.R().SetBody(msg).
 		Post("https://api.telegram.org/bot" + t.botToken + "/sendMessage?chat_id=" + t.chatId)
 	if err != nil {
-		log.WithField("err", err.Error())
+		log.WithField("err", err.Error()).Warn("send telegram message failed")
 		return
 	}
 	if s.StatusCode() != 200 {
-		log.WithField("status", s.StatusCode())
+		log.WithField("status", s.StatusCode()).Warn("send telegram message failed")
 	}
 }
 

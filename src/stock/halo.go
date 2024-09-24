@@ -1,29 +1,33 @@
-package vps_stock
+package stock
 
 import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
-	"bage/src/vps_stock/vars"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
+	"vps-stock/src/stock/vars"
 )
 
 type HaloVpsStockNotifier struct {
-	vps vars.VPS
-	bot BotNotifier
-	cli *resty.Client
+	vps       vars.VPS
+	bot       BotNotifier
+	cli       *resty.Client
+	kindStock map[string]int
 }
 
-func NewHaloVpsStockNotifier(vps vars.VPS, bot BotNotifier) *HaloVpsStockNotifier {
+func NewHaloVpsStockNotifier(vps vars.VPS, bot BotNotifier, kindStock map[string]int) *HaloVpsStockNotifier {
+	cli := resty.New().SetDebug(false)
+	cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+	cli.Header.Add("Referer", vps.BaseURL)
 	return &HaloVpsStockNotifier{
-		vps: vps,
-		bot: bot,
-		cli: resty.New(),
+		vps:       vps,
+		bot:       bot,
+		cli:       cli,
+		kindStock: kindStock,
 	}
 }
 
@@ -34,8 +38,7 @@ func (b *HaloVpsStockNotifier) Notify() {
 	if len(b.vps.BaseURL) == 0 {
 		return
 	}
-	b.cli.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
-	b.cli.Header.Add("Referer", b.vps.BaseURL)
+	defer CatchGoroutinePanic()
 	var wg sync.WaitGroup
 	var items []*vars.VpsStockItem
 	var mu sync.Mutex
@@ -44,15 +47,19 @@ func (b *HaloVpsStockNotifier) Notify() {
 		wg.Add(1)
 
 		go func() {
-			defer wg.Done()
-			res, err := b.cli.R().Get(u)
+			defer func() {
+				wg.Done()
+				CatchGoroutinePanic()
+			}()
 
+			res, err := b.cli.R().Get(u)
+			log.WithField("url", u).Trace("[halo] fetching url")
 			if err != nil {
-				log.WithField("url", u).Errorf("Error fetching url: %v", err)
+				log.WithField("url", u).Warn("[halo]Error fetching url: %v", err)
 				return
 			}
 			if res.StatusCode() != 200 {
-				log.WithField("status", res.StatusCode()).Error("Error fetching url")
+				log.WithField("status", res.StatusCode()).WithField("url", u).Warn("[halo]Error fetching url")
 				return
 			}
 			v := b.parseResponse(product.Kind, res.String())
@@ -68,15 +75,15 @@ func (b *HaloVpsStockNotifier) Notify() {
 	var sendMsg bool
 	for _, item := range items {
 		if item.Available > 0 {
-			if _, ok := notified[item.ProductName]; ok {
-				continue
+			if v, ok := b.kindStock[item.ProductName]; ok {
+				if v == item.Available { // 库存未变化, 不发送通知
+					continue
+				}
 			}
+			b.kindStock[item.ProductName] = item.Available
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
-			mapLock.Lock()
-			notified[item.ProductName] = time.Now()
-			mapLock.Unlock()
 		}
 	}
 	if sendMsg {
@@ -89,10 +96,15 @@ func (b *HaloVpsStockNotifier) Notify() {
 	}
 }
 func (b *HaloVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
+
+	defer func() {
+		CatchGoroutinePanic()
+	}()
+
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
 
 	if err != nil {
-		log.Errorf("Error parsing response: %v", err)
+		log.Warn("[halo]Error parsing response: %v", err)
 		return nil
 	}
 

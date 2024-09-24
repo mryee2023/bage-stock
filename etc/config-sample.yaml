@@ -1,5 +1,5 @@
 vps:
-  name: vps_stock
+  name: stock
   baseUrl: https://www.bagevm.com
   products:
     - name: tw-hinet-vds

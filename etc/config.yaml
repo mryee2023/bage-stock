@@ -29,10 +29,6 @@ vps:
     baseUrl: https://my.halocloud.net
     productUrl: https://my.halocloud.net/index.php?rp=/store/
     products:
-#      - name: singapore-singapore-bgp
-#        kind:
-#          - Singapore BGP VPS-500GB
-      
       - name: tokyo-japan-bgp
         kind:
           - Tokyo Japan BGP VPS-Traffic billing
@@ -50,4 +46,4 @@ notify:
 checkTime: 1m
 
 #发现库存后的冷却时间,即关注的商品有库存后,在冷却时间内不再提醒
-frozen: 10m
+frozen: 2m
