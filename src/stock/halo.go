@@ -46,6 +46,7 @@ func (b *HaloVpsStockNotifier) Notify() {
 		u := b.vps.ProductUrl + product.Name
 		wg.Add(1)
 		atomic.AddInt64(&TotalQuery, 1)
+		product := product
 		go func() {
 			defer func() {
 				wg.Done()
@@ -74,27 +75,23 @@ func (b *HaloVpsStockNotifier) Notify() {
 	var body = "📢 *Halo库存通知*\n\n"
 	var sendMsg bool
 	for _, item := range items {
-
 		exists, _ := db.GetKindByKind(item.ProductName)
 		if exists == nil {
 			exists = &db.Kind{
 				Kind: item.ProductName,
 			}
-		} else {
-			exists.Stock = item.Available
 		}
 		if item.Available > 0 {
 			if exists.Stock == item.Available {
 				db.AddOrUpdateKind(exists)
 				continue
 			}
-
+			exists.Stock = item.Available
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
 		}
 		db.AddOrUpdateKind(exists)
-
 	}
 	if sendMsg {
 		b.bot.Notify(NotifyMessage{Text: body})

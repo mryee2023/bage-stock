@@ -61,6 +61,7 @@ func (b *BageVpsStockNotifier) Notify() {
 		log.WithField("url", u).Trace("[bage] fetching url")
 		wg.Add(1)
 		atomic.AddInt64(&TotalQuery, 1)
+		product := product
 		go func() {
 			defer func() {
 				wg.Done()
@@ -89,20 +90,20 @@ func (b *BageVpsStockNotifier) Notify() {
 	wg.Wait()
 	var body = "📢 *BageVM 库存通知*\n\n"
 	var sendMsg bool
+	log.Infof("[bage] items: %s", ToJson(items))
 	for _, item := range items {
 		exists, _ := db.GetKindByKind(item.ProductName)
 		if exists == nil {
 			exists = &db.Kind{
 				Kind: item.ProductName,
 			}
-		} else {
-			exists.Stock = item.Available
 		}
 		if item.Available > 0 {
 			if exists.Stock == item.Available {
 				db.AddOrUpdateKind(exists)
 				continue
 			}
+			exists.Stock = item.Available
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)

@@ -28,7 +28,7 @@ func Open(cfg *vars.Config) {
 			log.Fatalf("open %v error: %v", cfg.Db, err)
 		}
 		db.AutoMigrate(&Kind{})
-		//db = db.Debug()
+		db = db.Debug()
 		sqlDb, err := db.DB()
 		if err != nil {
 			log.Fatalf("get db error: %v", err)

@@ -113,6 +113,7 @@ func initVpsWatch() {
 		for {
 			select {
 			case <-ticker.C:
+				log.Info("ticker process")
 				StartVpsWatch()
 			case <-breakChan:
 				return
