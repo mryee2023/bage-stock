@@ -82,6 +82,7 @@ func (b *BageVpsStockNotifier) Notify() {
 	wg.Wait()
 	var body = "📢 *BageVM 库存通知*\n\n"
 	var sendMsg bool
+	log.WithField("items", ToJson(items)).Debug("[bage] items")
 	for _, item := range items {
 		exists, _ := db.GetKindByKind(item.ProductName)
 		if exists == nil {

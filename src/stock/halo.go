@@ -90,6 +90,12 @@ func (b *HaloVpsStockNotifier) Notify() {
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
+		} else {
+			if exists.Stock != item.Available {
+				sendMsg = true
+				body += fmt.Sprintf("%s: 库存已售罄，您来晚啦 \n\n", item.ProductName)
+			}
+			exists.Stock = item.Available
 		}
 		db.AddOrUpdateKind(exists)
 	}
