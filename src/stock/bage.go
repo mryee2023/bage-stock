@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-
+	
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
@@ -38,7 +38,7 @@ func NewBageVpsStockNotifier(vps vars.VPS, bot BotNotifier) *BageVpsStockNotifie
 		vps: vps,
 		bot: bot,
 		cli: cli,
-
+		
 		//kindStock: kindStock,
 	}
 }
@@ -65,17 +65,17 @@ func (b *BageVpsStockNotifier) Notify() {
 			defer func() {
 				wg.Done()
 				CatchGoroutinePanic()
-
+				
 			}()
 			res, err := b.cli.R().Get(u)
-
+			
 			if err != nil {
 				log.WithField("url", u).Warnf("[bage] Error fetching url: %v", err)
 				return
 			}
 			if res.StatusCode() != 200 {
 				log.WithField("status", res.StatusCode()).WithField("url", u).Warn("[bage] Error fetching url")
-
+				
 				return
 			}
 			v := b.parseResponse(product.Kind, res.String())
@@ -89,13 +89,14 @@ func (b *BageVpsStockNotifier) Notify() {
 	wg.Wait()
 	var body = "📢 *BageVM 库存通知*\n\n"
 	var sendMsg bool
-
+	
 	for _, item := range items {
+		exists, _ := db.GetKindByKind(item.ProductName)
 		if item.Available > 0 {
-
-			exists, _ := db.GetKindByKind(item.ProductName)
+			
 			if exists != nil {
 				if exists.Stock == item.Available {
+					db.AddOrUpdateKind(exists)
 					continue
 				}
 				exists.Stock = item.Available
@@ -105,11 +106,12 @@ func (b *BageVpsStockNotifier) Notify() {
 					Stock: item.Available,
 				}
 			}
-			db.AddOrUpdateKind(exists)
+			
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
 		}
+		db.AddOrUpdateKind(exists)
 	}
 	if sendMsg {
 		b.bot.Notify(NotifyMessage{Text: body})
@@ -120,17 +122,17 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 		CatchGoroutinePanic()
 	}()
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
-
+	
 	if err != nil {
 		log.Warnf("[bage]Error parsing response: %v", err)
 		return nil
 	}
-
+	
 	var rtn []*vars.VpsStockItem
-
+	
 	doc.Find("#productspo  div.col-md-3").Each(func(i int, s *goquery.Selection) {
 		h5 := s.Find("div.proprice>h5")
-
+		
 		productName := h5.Contents().Not("em").Text()
 		productName = strings.TrimSpace(productName)
 		if len(kind) > 0 {
@@ -162,11 +164,11 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 			item.Available = 9999
 		}
 		// 3. 获取购买链接
-
+		
 		buyUrl, _ := s.Find("div.proprice a.btn").Attr("href")
 		item.BuyUrl = b.vps.BaseURL + "/" + buyUrl
 		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl)
-
+		
 		rtn = append(rtn, item)
 	})
 	return rtn

@@ -1,0 +1,2 @@
+macOS 交叉编译到Linux，因sqlite的原因，需要
+brew install zig

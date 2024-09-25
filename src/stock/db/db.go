@@ -3,11 +3,11 @@ package db
 import (
 	"sync"
 	"time"
-
+	
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"vps-stock/src/stock/vars"
-
+	
 	"gorm.io/gorm"
 )
 
@@ -17,11 +17,18 @@ var db *gorm.DB
 func Open(cfg *vars.Config) {
 	once.Do(func() {
 		var err error
-		db, err = gorm.Open(sqlite.Open(cfg.Db), &gorm.Config{})
+		db, err = gorm.Open(sqlite.Open(cfg.Db), &gorm.Config{
+			QueryFields:            true,
+			SkipDefaultTransaction: true,
+			NowFunc: func() time.Time {
+				return time.Now().Local()
+			},
+		})
 		if err != nil {
 			log.Fatalf("open %v error: %v", cfg.Db, err)
 		}
 		db.AutoMigrate(&Kind{})
+		//db = db.Debug()
 		sqlDb, err := db.DB()
 		if err != nil {
 			log.Fatalf("get db error: %v", err)
@@ -30,5 +37,5 @@ func Open(cfg *vars.Config) {
 		sqlDb.SetMaxOpenConns(100)
 		sqlDb.SetConnMaxLifetime(time.Hour)
 	})
-
+	
 }

@@ -5,7 +5,7 @@ import (
 )
 
 type Kind struct {
-	ID        int       `gorm:"primaryKey"`
+	ID        int       `gorm:"primaryKey,autoIncrement"`
 	Kind      string    `gorm:"unique"`
 	Stock     int       `gorm:"default:0"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
