@@ -74,32 +74,27 @@ func (b *HaloVpsStockNotifier) Notify() {
 	var body = "📢 *Halo库存通知*\n\n"
 	var sendMsg bool
 	for _, item := range items {
-		if item.Available > 0 {
-			//if v, ok := b.kindStock[item.ProductName]; ok {
-			//	if v == item.Available { // 库存未变化, 不发送通知
-			//		continue
-			//	}
-			//}
-			//b.kindStock[item.ProductName] = item.Available
 
-			exists, _ := db.GetKindByKind(item.ProductName)
-			if exists != nil {
-				if exists.Stock == item.Available {
-					continue
-				}
-				exists.Stock = item.Available
-			} else {
-				exists = &db.Kind{
-					Kind:  item.ProductName,
-					Stock: item.Available,
-				}
+		exists, _ := db.GetKindByKind(item.ProductName)
+		if exists == nil {
+			exists = &db.Kind{
+				Kind: item.ProductName,
 			}
-			db.AddOrUpdateKind(exists)
+		} else {
+			exists.Stock = item.Available
+		}
+		if item.Available > 0 {
+			if exists.Stock == item.Available {
+				db.AddOrUpdateKind(exists)
+				continue
+			}
 
 			sendMsg = true
 			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
 		}
+		db.AddOrUpdateKind(exists)
+
 	}
 	if sendMsg {
 		b.bot.Notify(NotifyMessage{Text: body})

@@ -3,11 +3,11 @@ package db
 import (
 	"sync"
 	"time"
-	
+
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"vps-stock/src/stock/vars"
-	
+
 	"gorm.io/gorm"
 )
 
@@ -37,5 +37,5 @@ func Open(cfg *vars.Config) {
 		sqlDb.SetMaxOpenConns(100)
 		sqlDb.SetConnMaxLifetime(time.Hour)
 	})
-	
+
 }

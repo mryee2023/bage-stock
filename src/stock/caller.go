@@ -1,6 +1,9 @@
 package stock
 
-import "runtime"
+import (
+	"encoding/json"
+	"runtime"
+)
 
 func GetCallerName() string {
 	pc, _, _, _ := runtime.Caller(2)
@@ -8,3 +11,11 @@ func GetCallerName() string {
 }
 
 var TotalQuery int64
+
+func ToJson(v interface{}) string {
+	p, e := json.Marshal(v)
+	if e != nil {
+		return e.Error()
+	}
+	return string(p)
+}

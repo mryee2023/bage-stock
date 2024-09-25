@@ -46,4 +46,5 @@ func (t *TelegramNotifier) Notify(msg NotifyMessage) {
 	if e != nil {
 		log.WithField("error", e).Error("send telegram message error")
 	}
+	//log.WithField("msg", v).WithField("rtn", v).Info("send telegram message success")
 }
