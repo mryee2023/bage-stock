@@ -14,12 +14,6 @@ import (
 	"vps-stock/src/stock/vars"
 )
 
-//var cli *resty.Client
-//
-//func init() {
-//	cli = resty.New().SetDebug(false)
-//}
-
 type VpsStockNotifier interface {
 	Notify()
 }
@@ -38,8 +32,6 @@ func NewBageVpsStockNotifier(vps vars.VPS, bot BotNotifier) *BageVpsStockNotifie
 		vps: vps,
 		bot: bot,
 		cli: cli,
-
-		//kindStock: kindStock,
 	}
 }
 
@@ -58,7 +50,7 @@ func (b *BageVpsStockNotifier) Notify() {
 	var mu sync.Mutex
 	for _, product := range b.vps.Products {
 		u := b.vps.ProductUrl + product.Name
-		log.WithField("url", u).Trace("[bage] fetching url")
+		log.WithField("url", u).Debug("[bage] fetching url")
 		wg.Add(1)
 		atomic.AddInt64(&TotalQuery, 1)
 		product := product
@@ -90,7 +82,6 @@ func (b *BageVpsStockNotifier) Notify() {
 	wg.Wait()
 	var body = "📢 *BageVM 库存通知*\n\n"
 	var sendMsg bool
-	log.Infof("[bage] items: %s", ToJson(items))
 	for _, item := range items {
 		exists, _ := db.GetKindByKind(item.ProductName)
 		if exists == nil {
@@ -115,8 +106,13 @@ func (b *BageVpsStockNotifier) Notify() {
 	}
 }
 func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
+	var rtn []*vars.VpsStockItem
+	var parseLog = map[string]int{
+		"-": 0,
+	}
 	defer func() {
 		CatchGoroutinePanic()
+		log.WithField("parseLog", parseLog).Debug("[bage]parse log")
 	}()
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(body))
 
@@ -124,8 +120,6 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 		log.Warnf("[bage]Error parsing response: %v", err)
 		return nil
 	}
-
-	var rtn []*vars.VpsStockItem
 
 	doc.Find("#productspo  div.col-md-3").Each(func(i int, s *goquery.Selection) {
 		h5 := s.Find("div.proprice>h5")
@@ -154,11 +148,13 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 			available = strings.Replace(available, "Available", "", -1)
 			available = strings.TrimSpace(available) // 去掉多余的空格
 			item.Available = cast.ToInt(available)
+			parseLog[productName] = item.Available
 			if item.Available == 0 {
 				return
 			}
 		} else {
 			item.Available = 9999
+			parseLog[productName] = item.Available
 		}
 		// 3. 获取购买链接
 
@@ -168,5 +164,6 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 
 		rtn = append(rtn, item)
 	})
+
 	return rtn
 }

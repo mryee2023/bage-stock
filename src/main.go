@@ -113,7 +113,6 @@ func initVpsWatch() {
 		for {
 			select {
 			case <-ticker.C:
-				log.Info("ticker process")
 				StartVpsWatch()
 			case <-breakChan:
 				return
@@ -137,6 +136,7 @@ func main() {
 		TimestampFormat: "2006-01-02 15:04:05",
 		PrettyPrint:     false,
 	})
+
 	log.SetLevel(log.InfoLevel)
 	carbon.SetDefault(carbon.Default{
 		Layout:       carbon.DateTimeLayout,
@@ -167,6 +167,23 @@ func main() {
 	err = yaml.Unmarshal(b, &config)
 	if err != nil {
 		log.Fatalf("unmarshal config failure: %v", err)
+	}
+
+	switch config.LogLevel {
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
+	case "panic":
+		log.SetLevel(log.PanicLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
 	}
 
 	bot = stock.NewTelegramNotifier(config.Notify.Key, config.Notify.ChatId)

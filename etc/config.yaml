@@ -49,3 +49,5 @@ checkTime: 1m
 frozen: 2m
 
 db: /Users/yibin/github/vps-stock/db.db
+
+logLevel: info

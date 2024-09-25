@@ -27,4 +27,5 @@ type Config struct {
 	CheckTime string `yaml:"checkTime"`
 	Frozen    string `yaml:"frozen"`
 	Db        string `yaml:"db"`
+	LogLevel  string `yaml:"logLevel"`
 }
