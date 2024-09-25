@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/PuerkitoBio/goquery v1.9.3
 	github.com/fsnotify/fsnotify v1.7.0
-	github.com/go-resty/resty/v2 v2.15.1
+	github.com/go-resty/resty/v2 v2.15.2
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/golang-module/carbon/v2 v2.3.12
 	github.com/sirupsen/logrus v1.9.3

@@ -11,8 +11,6 @@ type NotifyMessage struct {
 	ChatId *int64
 }
 
-var AlertId = int64(-1002322760704)
-
 type BotNotifier interface {
 	Notify(NotifyMessage)
 }

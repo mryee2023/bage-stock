@@ -192,7 +192,7 @@ func main() {
 	}
 
 	proc.AddShutdownListener(func() {
-		bot.Notify(stock.NotifyMessage{Text: "⚠️ BageVM 库存监控服务已停止", ChatId: &stock.AlertId})
+		bot.Notify(stock.NotifyMessage{Text: "⚠️ BageVM 库存监控服务已停止", ChatId: &config.AlterChannelId})
 		log.Info("service shutdown")
 	})
 
@@ -208,7 +208,7 @@ func main() {
 	stock.InitTgBotListen(config.Notify.Key)
 	stock.NewServiceCtx(stock.TgBotInstance(), &config)
 
-	bot.Notify(stock.NotifyMessage{Text: "📢 BageVM 库存监控服务已启动", ChatId: &stock.AlertId})
+	bot.Notify(stock.NotifyMessage{Text: "📢 BageVM 库存监控服务已启动", ChatId: &config.AlterChannelId})
 
 	// 定义路由
 	http.HandleFunc("/log", func(writer http.ResponseWriter, request *http.Request) {

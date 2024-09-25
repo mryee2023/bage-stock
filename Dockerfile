@@ -1,8 +1,26 @@
-FROM golang:1.20 AS buildStage
-WORKDIR /go/src/app
+FROM golang:alpine AS builder
+
+LABEL stage=gobuilder
+
+ENV CGO_ENABLED 0
+ENV GOOS linux
+ENV GOPROXY https://goproxy.cn,direct
+
+WORKDIR /build/zero
+
+ADD go.mod .
+ADD go.sum .
+RUN go mod download
 COPY . .
-RUN go build -o ./main src/main.go
-FROM alpine:latest
+RUN go build -ldflags="-s -w" -o /app/main src/main.go
+
+
+FROM alpine
+
+RUN apk update --no-cache && apk add --no-cache ca-certificates tzdata
+ENV TZ Asia/Shanghai
+
 WORKDIR /app
-COPY --from=buildStage /go/src/app/main /app/
-ENTRYPOINT ./main
+COPY --from=builder /app/main /app/main
+
+CMD ["./main"]

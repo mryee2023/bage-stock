@@ -51,3 +51,4 @@ frozen: 2m
 db: /Users/yibin/github/vps-stock/db.db
 
 logLevel: info
+alterChannelId: -1002322760704

@@ -22,10 +22,11 @@ type Notify struct {
 	ChatId   string `yaml:"chatId"`
 }
 type Config struct {
-	VPS       []VPS  `yaml:"vps"`
-	Notify    Notify `yaml:"notify"`
-	CheckTime string `yaml:"checkTime"`
-	Frozen    string `yaml:"frozen"`
-	Db        string `yaml:"db"`
-	LogLevel  string `yaml:"logLevel"`
+	VPS            []VPS  `yaml:"vps"`
+	Notify         Notify `yaml:"notify"`
+	CheckTime      string `yaml:"checkTime"`
+	Frozen         string `yaml:"frozen"`
+	Db             string `yaml:"db"`
+	LogLevel       string `yaml:"logLevel"`
+	AlterChannelId int64  `yaml:"alterChannelId"`
 }
