@@ -21,7 +21,7 @@ func AddOrUpdateKind(k *Kind) error {
 	if v.RowsAffected == 0 {
 		return db.Create(k).Error
 	}
-	return db.Model(&Kind{}).Where("kind = ?", k.Kind).Updates(k).Error
+	return db.Model(&Kind{}).Where("kind = ?", k.Kind).Save(k).Error
 }
 
 func GetKindByKind(kind string) (*Kind, error) {

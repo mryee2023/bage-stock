@@ -18,7 +18,7 @@ func Open(cfg *vars.Config) {
 	once.Do(func() {
 		var err error
 		db, err = gorm.Open(sqlite.Open(cfg.Db), &gorm.Config{
-			QueryFields:            true,
+			QueryFields:            false,
 			SkipDefaultTransaction: true,
 			NowFunc: func() time.Time {
 				return time.Now().Local()
@@ -28,7 +28,9 @@ func Open(cfg *vars.Config) {
 			log.Fatalf("open %v error: %v", cfg.Db, err)
 		}
 		db.AutoMigrate(&Kind{})
-		db = db.Debug()
+		if cfg.LogLevel == "debug" {
+			db = db.Debug()
+		}
 		sqlDb, err := db.DB()
 		if err != nil {
 			log.Fatalf("get db error: %v", err)
