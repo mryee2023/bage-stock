@@ -94,7 +94,7 @@ func VerifyLastStock(items []*vars.VpsStockItem) (bool, string) {
 	}()
 	var sendMsg = false
 	var body = ""
-	for i, item := range items {
+	for _, item := range items {
 		exists, _ := db.GetKindByKind(item.ProductName)
 		if exists == nil {
 			exists = &db.Kind{
@@ -108,12 +108,12 @@ func VerifyLastStock(items []*vars.VpsStockItem) (bool, string) {
 			}
 			exists.Stock = item.Available
 			sendMsg = true
-			body += fmt.Sprintf("%d. %s: 库存 *%d* \n\n", i+1, item.ProductName, item.Available)
-			body += fmt.Sprintf("%s\n\n", item.GetBuyUrl())
+			body += fmt.Sprintf("*%s*，可购买库存 *%d* \n\n", item.ProductName, item.Available)
+			body += fmt.Sprintf("👉 %s\n\n", item.GetBuyUrl())
 		} else {
 			if exists.Stock != item.Available {
 				sendMsg = true
-				body += fmt.Sprintf("%d. ~%s: 库存已售罄，您来晚啦~ \n\n", i+1, item.ProductName)
+				body += fmt.Sprintf("~%s: 库存已售罄，您来晚啦~ \n\n", item.ProductName)
 			}
 			exists.Stock = item.Available
 		}
