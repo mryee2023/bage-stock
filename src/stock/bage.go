@@ -80,9 +80,20 @@ func (b *BageVpsStockNotifier) Notify() {
 		}()
 	}
 	wg.Wait()
-	var body = "📢 *BageVM 库存通知*\n\n"
-	var sendMsg bool
 	log.WithField("items", ToJson(items)).Debug("[bage] items")
+	sendMsg, body := VerifyLastStock(items)
+	if sendMsg {
+		b.bot.Notify(NotifyMessage{Text: "📢 *BageVM 库存通知*\n\n" + body})
+	}
+}
+
+// VerifyLastStock 验证库存, 并返回是否需要发送消息
+func VerifyLastStock(items []*vars.VpsStockItem) (bool, string) {
+	defer func() {
+		CatchGoroutinePanic()
+	}()
+	var sendMsg = false
+	var body = ""
 	for _, item := range items {
 		exists, _ := db.GetKindByKind(item.ProductName)
 		if exists == nil {
@@ -92,25 +103,23 @@ func (b *BageVpsStockNotifier) Notify() {
 		}
 		if item.Available > 0 {
 			if exists.Stock == item.Available {
-				db.AddOrUpdateKind(exists)
+				_ = db.AddOrUpdateKind(exists)
 				continue
 			}
 			exists.Stock = item.Available
 			sendMsg = true
-			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
+			body += fmt.Sprintf("%s: 库存 *%d* \n\n", item.ProductName, item.Available)
 			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
 		} else {
 			if exists.Stock != item.Available {
 				sendMsg = true
-				body += fmt.Sprintf("%s: 库存已售罄，您来晚啦 \n\n", item.ProductName)
+				body += fmt.Sprintf("~%s: 库存已售罄，您来晚啦~ \n\n", item.ProductName)
 			}
 			exists.Stock = item.Available
 		}
-		db.AddOrUpdateKind(exists)
+		_ = db.AddOrUpdateKind(exists)
 	}
-	if sendMsg {
-		b.bot.Notify(NotifyMessage{Text: body})
-	}
+	return sendMsg, body
 }
 func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {
 	var rtn []*vars.VpsStockItem

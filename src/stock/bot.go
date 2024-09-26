@@ -1,6 +1,8 @@
 package stock
 
 import (
+	"strings"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
@@ -27,6 +29,23 @@ func NewTelegramNotifier(botToken string, chatId string) *TelegramNotifier {
 	}
 }
 
+var replacer = strings.NewReplacer("_", "\\_",
+	"[", "\\[",
+	"]", "\\]",
+	"(", "\\(",
+	")", "\\)",
+	"`", "\\`",
+	">", "\\>",
+	"#", "\\#",
+	"+", "\\+",
+	"-", "\\-",
+	"=", "\\=",
+	"|", "\\|",
+	"{", "\\{",
+	"}", "\\}",
+	".", "\\.",
+	"!", "\\!")
+
 func (t *TelegramNotifier) Notify(msg NotifyMessage) {
 	tg := TgBotInstance()
 	if tg == nil {
@@ -35,14 +54,16 @@ func (t *TelegramNotifier) Notify(msg NotifyMessage) {
 	defer func() {
 		CatchGoroutinePanic()
 	}()
-	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), msg.Text)
+
+	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), replacer.Replace(msg.Text))
 	if msg.ChatId != nil {
 		tgMsg.ChatID = *msg.ChatId
 	}
-	tgMsg.ParseMode = tgbotapi.ModeMarkdown
+	tgMsg.ParseMode = tgbotapi.ModeMarkdownV2
+	tgMsg.DisableWebPagePreview = true
 	_, e := tg.Send(tgMsg)
 	if e != nil {
 		log.WithField("error", e).Error("send telegram message error")
 	}
-	//log.WithField("msg", v).WithField("rtn", v).Info("send telegram message success")
+
 }

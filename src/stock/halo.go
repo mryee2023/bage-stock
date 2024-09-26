@@ -10,7 +10,6 @@ import (
 	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
-	"vps-stock/src/stock/db"
 	"vps-stock/src/stock/vars"
 )
 
@@ -72,35 +71,10 @@ func (b *HaloVpsStockNotifier) Notify() {
 		}()
 	}
 	wg.Wait()
-	var body = "📢 *Halo库存通知*\n\n"
-	var sendMsg bool
-	for _, item := range items {
-		exists, _ := db.GetKindByKind(item.ProductName)
-		if exists == nil {
-			exists = &db.Kind{
-				Kind: item.ProductName,
-			}
-		}
-		if item.Available > 0 {
-			if exists.Stock == item.Available {
-				db.AddOrUpdateKind(exists)
-				continue
-			}
-			exists.Stock = item.Available
-			sendMsg = true
-			body += fmt.Sprintf("%s: 库存 %d\n\n", item.ProductName, item.Available)
-			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
-		} else {
-			if exists.Stock != item.Available {
-				sendMsg = true
-				body += fmt.Sprintf("%s: 库存已售罄，您来晚啦 \n\n", item.ProductName)
-			}
-			exists.Stock = item.Available
-		}
-		db.AddOrUpdateKind(exists)
-	}
+
+	sendMsg, body := VerifyLastStock(items)
 	if sendMsg {
-		b.bot.Notify(NotifyMessage{Text: body})
+		b.bot.Notify(NotifyMessage{Text: "📢 *Halo库存通知*\n\n" + body})
 	}
 }
 func (b *HaloVpsStockNotifier) parseResponse(kind []string, body string) []*vars.VpsStockItem {

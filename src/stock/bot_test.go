@@ -65,3 +65,18 @@ func TestHuMan(t *testing.T) {
 	}
 
 }
+
+//
+//func TestMarkdownV2(t *testing.T) {
+//	bot, err := tgbotapi.NewBotAPI("7727116717:AAH31RbD5ygRkuWGO1EaCcfKybAoirykxaY")
+//
+//	s := tgbotapi.EscapeText(tgbotapi.ModeMarkdownV2, "*bold \\*text*\n_italic \\*text_\n__underline__\n~strikethrough~\n||spoiler||\n*bold _italic bold ~italic bold strikethrough ||italic bold strikethrough spoiler||~ __underline italic bold___ bold*\n[inline URL](http://www.example.com/)\n[inline mention of a user](tg://user?id=123456789)\n![👍](tg://emoji?id=5368324170671202286)\n`inline fixed-width code`\n```\n\tpre-formatted fixed-width code block\n\t```\n```python\n\tpre-formatted fixed-width code block written in the Python programming language\n\t```\n>Block quotation started\n>Block quotation continued\n>Block quotation continued\n>Block quotation continued\n>The last line of the block quotation\n**>The expandable block quotation started right after the previous block quotation\n>It is separated from the previous block quotation by an empty bold entity\n>Expandable block quotation continued\n>Hidden by default part of the expandable block quotation started\n>Expandable block quotation continued\n>The last line of the expandable block quotation with the expandability mark||\n**>")
+//	s = "*bold \\*text*\n_italic \\*text_\n__underline__\n~strikethrough~\n||spoiler||\n*bold _italic bold ~italic bold strikethrough ||italic bold strikethrough spoiler||~ __underline italic bold___ bold*\n[inline URL](http://www.example.com/)\n[inline mention of a user](tg://user?id=123456789)\n![👍](tg://emoji?id=5368324170671202286)\n`inline fixed-width code`\n```\n\tpre-formatted fixed-width code block\n\t```\n```python\n\tpre-formatted fixed-width code block written in the Python programming language\n\t```\n>Block quotation started\n>Block quotation continued\n>Block quotation continued\n>Block quotation continued\n>The last line of the block quotation\n**>The expandable block quotation started right after the previous block quotation\n>It is separated from the previous block quotation by an empty bold entity\n>Expandable block quotation continued\n>Hidden by default part of the expandable block quotation started\n>Expandable block quotation continued\n>The last line of the expandable block quotation with the expandability mark||\n**>"
+//	var msg = tgbotapi.NewMessage(-1002398248297, s)
+//	msg.ParseMode = tgbotapi.ModeMarkdownV2
+//	_, err = bot.Send(msg)
+//	if err != nil {
+//		fmt.Println(err.Error())
+//	}
+//
+//}
