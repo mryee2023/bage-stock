@@ -23,4 +23,4 @@ ENV TZ Asia/Shanghai
 WORKDIR /app
 COPY --from=builder /app/main /app/main
 
-CMD ["./main" , "-f", "etc/config.yaml"]
+ENTRYPOINT ["./main"]  

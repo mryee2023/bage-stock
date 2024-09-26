@@ -94,7 +94,7 @@ func VerifyLastStock(items []*vars.VpsStockItem) (bool, string) {
 	}()
 	var sendMsg = false
 	var body = ""
-	for _, item := range items {
+	for i, item := range items {
 		exists, _ := db.GetKindByKind(item.ProductName)
 		if exists == nil {
 			exists = &db.Kind{
@@ -108,12 +108,12 @@ func VerifyLastStock(items []*vars.VpsStockItem) (bool, string) {
 			}
 			exists.Stock = item.Available
 			sendMsg = true
-			body += fmt.Sprintf("%s: 库存 *%d* \n\n", item.ProductName, item.Available)
-			body += fmt.Sprintf("购买链接: %s\n\n", item.BuyUrl)
+			body += fmt.Sprintf("%d. %s: 库存 *%d* \n\n", i+1, item.ProductName, item.Available)
+			body += fmt.Sprintf("%s\n\n", item.GetBuyUrl())
 		} else {
 			if exists.Stock != item.Available {
 				sendMsg = true
-				body += fmt.Sprintf("~%s: 库存已售罄，您来晚啦~ \n\n", item.ProductName)
+				body += fmt.Sprintf("%d. ~%s: 库存已售罄，您来晚啦~ \n\n", i+1, item.ProductName)
 			}
 			exists.Stock = item.Available
 		}
@@ -177,7 +177,7 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 
 		buyUrl, _ := s.Find("div.proprice a.btn").Attr("href")
 		item.BuyUrl = b.vps.BaseURL + "/" + buyUrl
-		item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl)
+		//item.BuyUrl = fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl)
 
 		rtn = append(rtn, item)
 	})

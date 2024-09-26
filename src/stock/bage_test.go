@@ -2,7 +2,6 @@ package stock
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/bytedance/mockey"
@@ -25,9 +24,14 @@ func TestVerifyLastStock(t *testing.T) {
 			args: args{
 				items: []*vars.VpsStockItem{
 					{
-						ProductName: "测试商品_可以购买了",
+						ProductName: "测试商品1",
+						Available:   1000,
+						BuyUrl:      "https://www.bagevm.com/cart.php?a=add&pid=32",
+					},
+					{
+						ProductName: "测试商品 2",
 						Available:   100,
-						BuyUrl:      "https://www.baidu.com",
+						BuyUrl:      "https://www.bagevm.com/cart.php?a=add&pid=32",
 					},
 				},
 				mockGetKindByKind: func() (*db.Kind, error) {
@@ -40,7 +44,12 @@ func TestVerifyLastStock(t *testing.T) {
 			args: args{
 				items: []*vars.VpsStockItem{
 					{
-						ProductName: "测试商品_售罄",
+						ProductName: "测试商品_1",
+						Available:   0,
+						BuyUrl:      "https://www.baidu.com",
+					},
+					{
+						ProductName: "测试商品_2",
 						Available:   0,
 						BuyUrl:      "https://www.baidu.com",
 					},
@@ -63,7 +72,11 @@ func TestVerifyLastStock(t *testing.T) {
 
 					var msg = tgbotapi.NewMessage(-1002398248297, got1)
 					msg.ParseMode = tgbotapi.ModeMarkdownV2
-					replacer := strings.NewReplacer("_", "\\_", "[", "\\[", "]", "\\]", "(", "\\(", ")", "\\)", "`", "\\`", ">", "\\>", "#", "\\#", "+", "\\+", "-", "\\-", "=", "\\=", "|", "\\|", "{", "\\{", "}", "\\}", ".", "\\.", "!", "\\!")
+					replacer := Replacer
+					//msg.Text += "\n||spoiler||\n"
+					//msg.Text += "`这是一段代码`\n"
+					//msg.Text += "```\n这是另一段代码\n```\n"
+					//msg.Text += "\n>这是一段引用\n"
 					msg.Text = replacer.Replace(msg.Text)
 
 					_, err = bot.Send(msg)

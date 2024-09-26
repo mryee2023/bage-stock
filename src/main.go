@@ -19,7 +19,7 @@ import (
 	"vps-stock/src/stock/vars"
 )
 
-var configFile = flag.String("f", "etc/config.yaml", "the config file")
+var configFile = flag.String("f", "/etc/config.yaml", "the config file")
 var config vars.Config
 var bot stock.BotNotifier
 

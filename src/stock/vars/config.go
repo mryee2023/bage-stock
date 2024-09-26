@@ -1,9 +1,18 @@
 package vars
 
+import (
+	"fmt"
+)
+
 type VpsStockItem struct {
 	ProductName string `json:"product_name"`
 	Available   int    `json:"available"`
 	BuyUrl      string `json:"buy_url"`
+}
+
+func (item *VpsStockItem) GetBuyUrl() string {
+	return fmt.Sprintf("[%s](%s)", item.BuyUrl, item.BuyUrl)
+
 }
 
 type VPS struct {

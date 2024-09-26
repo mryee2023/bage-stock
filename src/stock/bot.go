@@ -29,18 +29,18 @@ func NewTelegramNotifier(botToken string, chatId string) *TelegramNotifier {
 	}
 }
 
-var replacer = strings.NewReplacer("_", "\\_",
-	"[", "\\[",
-	"]", "\\]",
-	"(", "\\(",
-	")", "\\)",
-	"`", "\\`",
-	">", "\\>",
+var Replacer = strings.NewReplacer("_", "\\_",
+	//"[", "\\[",
+	//"]", "\\]",
+	//"(", "\\(",
+	//")", "\\)",
+	//"`", "\\`",
+	//">", "\\>",
 	"#", "\\#",
 	"+", "\\+",
 	"-", "\\-",
 	"=", "\\=",
-	"|", "\\|",
+	//"|", "\\|",
 	"{", "\\{",
 	"}", "\\}",
 	".", "\\.",
@@ -55,7 +55,7 @@ func (t *TelegramNotifier) Notify(msg NotifyMessage) {
 		CatchGoroutinePanic()
 	}()
 
-	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), replacer.Replace(msg.Text))
+	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), Replacer.Replace(msg.Text))
 	if msg.ChatId != nil {
 		tgMsg.ChatID = *msg.ChatId
 	}
