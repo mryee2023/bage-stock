@@ -1,14 +1,28 @@
 vps:
-  name: stock
-  baseUrl: https://www.bagevm.com
-  products:
-    - name: tw-hinet-vds
-      kind:
-        - Hinet Dynamic 600M
+  - name: bagevm
+    baseUrl: https://www.bagevm.com
+    productUrl: https://www.bagevm.com/index.php?rp=/store/
+    products:
+
+      - name: singapore-servers
+        kind:
+          - Singapore - SMALL
+
+
 
 notify:
-  platform: bark
-  key: YOUR_BARK_KEY
+#  platform: bark                    #bark or telegram
+#  key: duncuXiJeFrwkh55uMBmZg       #bark key or telegram bot token
+#  chatId:       #telegram chat id
 
 
+#监控间隔时间
 checkTime: 10s
+
+#发现库存后的冷却时间,即关注的商品有库存后,在冷却时间内不再提醒
+frozen: 2m
+db: /data/db.db
+logLevel: info
+
+#服务启动/停止通知频道
+alterChannelId: 
