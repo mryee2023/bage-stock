@@ -108,13 +108,13 @@ func VerifyLastStock(items []*vars.VpsStockItem) (bool, string) {
 			}
 			exists.Stock = item.Available
 			sendMsg = true
-			body += fmt.Sprintf("*%s*，可购买库存 *%d* \n\n", item.ProductName, item.Available)
+			body += fmt.Sprintf("*%s*，可购买库存 *%d*，💰 %s \n\n", item.ProductName, item.Available, item.Price)
 			body += fmt.Sprintf("👉 %s\n\n", item.GetBuyUrl())
 		} else {
-			if exists.Stock != item.Available {
-				sendMsg = true
-				body += fmt.Sprintf("~%s: 库存已售罄，您来晚啦~ \n\n", item.ProductName)
-			}
+			//if exists.Stock != item.Available {
+			//	sendMsg = true
+			//	body += fmt.Sprintf("~%s: 库存已售罄，您来晚啦~ \n\n", item.ProductName)
+			//}
 			exists.Stock = item.Available
 		}
 		_ = db.AddOrUpdateKind(exists)
@@ -139,7 +139,7 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 
 	doc.Find("#productspo  div.col-md-3").Each(func(i int, s *goquery.Selection) {
 		h5 := s.Find("div.proprice>h5")
-
+		price := s.Find("div.product-pricing span.price").Text()
 		productName := h5.Contents().Not("em").Text()
 		productName = strings.TrimSpace(productName)
 		if len(kind) > 0 {
@@ -157,6 +157,7 @@ func (b *BageVpsStockNotifier) parseResponse(kind []string, body string) []*vars
 		item := &vars.VpsStockItem{
 			ProductName: productName,
 			Available:   9999,
+			Price:       price,
 		}
 		if h5.Find("em").Length() > 0 {
 			// 2. 获取 <em> 标签内 <span> 的值

@@ -47,6 +47,7 @@ var Replacer = strings.NewReplacer("_", "\\_",
 	"!", "\\!")
 
 func (t *TelegramNotifier) Notify(msg NotifyMessage) {
+
 	tg := TgBotInstance()
 	if tg == nil {
 		return
@@ -56,6 +57,7 @@ func (t *TelegramNotifier) Notify(msg NotifyMessage) {
 	}()
 
 	tgMsg := tgbotapi.NewMessage(cast.ToInt64(t.chatId), Replacer.Replace(msg.Text))
+
 	if msg.ChatId != nil {
 		tgMsg.ChatID = *msg.ChatId
 	}

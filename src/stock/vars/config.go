@@ -8,6 +8,7 @@ type VpsStockItem struct {
 	ProductName string `json:"product_name"`
 	Available   int    `json:"available"`
 	BuyUrl      string `json:"buy_url"`
+	Price       string `json:"price"`
 }
 
 func (item *VpsStockItem) GetBuyUrl() string {
